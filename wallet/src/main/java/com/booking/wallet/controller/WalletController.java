@@ -26,7 +26,7 @@ public class WalletController {
     @Autowired
     private WalletRepository walletRepository;
     
-    @GetMapping("/wallet/{id}")
+    @GetMapping("/wallets/{id}")
     public ResponseEntity<?> fetchWalletById(@PathVariable("id") @NonNull Long walletId){
         try{
             Wallet wallet = walletRepository.findById(walletId).get();
@@ -37,7 +37,7 @@ public class WalletController {
     }
 
     @Transactional
-    @PutMapping("/wallet/{id}")
+    @PutMapping("/wallets/{id}")
     public ResponseEntity<?> updateWallet(@Valid @RequestBody UpdateWalletBody requestBody, @PathVariable("id") @NonNull Long walletId){
         Wallet wallet;
         try{
@@ -60,7 +60,7 @@ public class WalletController {
         return new ResponseEntity<Wallet>(wallet, HttpStatus.OK);
     }
 
-    @DeleteMapping("/wallet/{id}")
+    @DeleteMapping("/wallets/{id}")
     public ResponseEntity<HttpStatus> deleteWalletById(@PathVariable("id") @NonNull Long walletId){
         if(!walletRepository.existsById(walletId))
             return new ResponseEntity<HttpStatus>(HttpStatus.NOT_FOUND);
@@ -68,7 +68,7 @@ public class WalletController {
         return new ResponseEntity<HttpStatus>(HttpStatus.OK);
     }
 
-    @DeleteMapping("/wallet")
+    @DeleteMapping("/wallets")
     public ResponseEntity<HttpStatus> deleteAllWallet(){
         walletRepository.deleteAll();
         return new ResponseEntity<HttpStatus>(HttpStatus.OK);
