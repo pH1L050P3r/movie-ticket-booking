@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.lang.NonNull;
 
@@ -37,7 +38,7 @@ public class WalletController {
 
     @Transactional
     @PutMapping("/wallet/{id}")
-    public ResponseEntity<?> updateWallet(@Valid UpdateWalletBody requestBody, @PathVariable("id") @NonNull Long walletId){
+    public ResponseEntity<?> updateWallet(@Valid @RequestBody UpdateWalletBody requestBody, @PathVariable("id") @NonNull Long walletId){
         Wallet wallet;
         try{
             wallet = walletRepository.findById(walletId).get();
