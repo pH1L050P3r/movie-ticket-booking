@@ -56,7 +56,7 @@ public class WalletController {
             return new ResponseEntity<HttpStatus>(HttpStatus.BAD_REQUEST);
 
         wallet = walletRepository.save(wallet);
-        return new ResponseEntity<Wallet>(wallet, HttpStatus.CREATED);
+        return new ResponseEntity<Wallet>(wallet, HttpStatus.OK);
     }
 
     @DeleteMapping("/wallet/{id}")
