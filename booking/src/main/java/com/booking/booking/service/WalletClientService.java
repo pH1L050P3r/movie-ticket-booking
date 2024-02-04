@@ -16,7 +16,7 @@ import org.springframework.lang.NonNull;
 
 @Service
 public class WalletClientService implements IWalletClientService {
-    private @NonNull String baseUrl = "http://127.0.0.1:8082/wallets";
+    private @NonNull String baseUrl = "http://host.docker.internal:8082/wallets";
     private final WebClient webClient;
 
     public WalletClientService() {
