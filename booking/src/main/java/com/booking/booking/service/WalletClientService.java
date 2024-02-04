@@ -10,18 +10,20 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import com.booking.booking.enums.Action;
 
+import org.springframework.lang.NonNull;
+
 
 
 @Service
 public class WalletClientService implements IWalletClientService {
-    private String baseUrl = "http://127.0.0.1:8082/wallets";
+    private @NonNull String baseUrl = "http://127.0.0.1:8082/wallets";
     private final WebClient webClient;
 
     public WalletClientService() {
         this.webClient = WebClient.builder().baseUrl(baseUrl).build();
     }
 
-    private String put(String uri, Map<String, String> body){
+    private String put(@NonNull String uri, @NonNull Map<String, String> body){
         return (
             webClient.put()
             .uri(uri)
@@ -34,7 +36,7 @@ public class WalletClientService implements IWalletClientService {
         );
     }
 
-    private String get(String uri){
+    private String get(@NonNull String uri){
         return (
             webClient.get()
             .uri(uri)
@@ -45,7 +47,7 @@ public class WalletClientService implements IWalletClientService {
         );
     }
 
-    private String delete(String uri){
+    private String delete(@NonNull String uri){
         return (
             webClient.delete()
             .uri(uri)
