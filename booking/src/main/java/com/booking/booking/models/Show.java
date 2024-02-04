@@ -7,18 +7,25 @@ import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 
 @Entity
 @Data
 @Table(name = "show")
+@NoArgsConstructor
+@AllArgsConstructor
 public class Show {
     @Id
     @Column(name = "id")
+    @GeneratedValue (strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(name = "threatre_id")
@@ -32,7 +39,4 @@ public class Show {
 
     @Column(name = "seats_available")
     private Long seatsAvailable;
-
-    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, mappedBy = "show")
-    private Set<Booking> bookings = new HashSet<>();
 }
