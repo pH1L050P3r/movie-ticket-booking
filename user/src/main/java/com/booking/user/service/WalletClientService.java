@@ -57,8 +57,8 @@ public class WalletClientService implements IWalletClientService {
     }
 
     @Override
-    public String deleteWalletById(Long userId){
-        String uri = "/" + Long.toString(userId);
+    public String deleteWalletById(Long walletId){
+        String uri = "/" + Long.toString(walletId);
         return this.delete(uri);
     }
 

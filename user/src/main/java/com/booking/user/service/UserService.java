@@ -1,7 +1,5 @@
 package com.booking.user.service;
 
-import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -26,8 +24,8 @@ public class UserService {
 	public boolean deleteUser(Long userId) {
 		if(!userRepository.existsById(userId)) 
 			return false;
-		bookingClientService.deleteBookingsByUserId(userId);
-		walletClientService.deleteWalletByUserId(userId);
+		// bookingClientService.deleteBookingsByUserId(userId);
+		walletClientService.deleteWalletById(userId);
 		userRepository.deleteById(userId);
 		return true;
     }
@@ -37,7 +35,7 @@ public class UserService {
 	}
 
 	public void deleteAllUsers() {
-		bookingClientService.deleteAllBookings();
+		// bookingClientService.deleteAllBookings();
 		walletClientService.deleteAllWallets();
 		userRepository.deleteAllInBatch();
 	}
