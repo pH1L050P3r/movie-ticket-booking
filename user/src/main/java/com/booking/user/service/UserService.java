@@ -7,12 +7,16 @@ import org.springframework.stereotype.Service;
 
 import com.booking.user.models.User;
 import com.booking.user.repository.UserRepository;
+import com.booking.user.service.IWalletClientService;
 
 @Service
 public class UserService {
 	
 	@Autowired
 	private UserRepository userRepository;
+	@Autowired
+	private IWalletClientService walletClientService;
+
 	
 	public User createUser(String userName, String email) {
 		User user = new User(userName, email);
@@ -22,9 +26,9 @@ public class UserService {
 	public boolean deleteUser(Long userId) {
 		if(!userRepository.existsById(userId)) 
 			return false;
+		bookingClientService.deleteBookingsByUserId(userId);
+		walletClientService.deleteWalletByUserId(userId);
 		userRepository.deleteById(userId);
-		deleteUserBookings(userId);
-		deleteWallet(userId);
 		return true;
     }
 
@@ -33,28 +37,8 @@ public class UserService {
 	}
 
 	public void deleteAllUsers() {
-		List<User> users = userRepository.findAll();
+		bookingClientService.deleteAllBookings();
+		walletClientService.deleteAllWallets();
 		userRepository.deleteAllInBatch();
-		for(User user: users){
-			deleteUserBookings(user.getId());
-			deleteWallet(user.getId());
-		}
 	}
-
-	private void deleteWallet(Long userId){
-		//Todo : http request to wallet service and delete wallet
-	}
-
-	private void deleteUserBookings(Long userId){
-		//Todo: http request to booking service and delete bookings
-	}
-
-	public User getUserById(Long userId){
-		return userRepository.findById(userId).get();
-	}
-
-	public boolean isUserExists(Long userId){
-		return userRepository.existsById(userId);
-	}
-
 }
