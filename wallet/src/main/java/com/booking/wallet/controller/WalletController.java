@@ -17,6 +17,7 @@ import com.booking.wallet.enums.Action;
 import com.booking.wallet.models.UpdateWalletBody;
 import com.booking.wallet.models.Wallet;
 import com.booking.wallet.repositories.WalletRepository;
+import com.booking.wallet.services.IUserClientService;
 
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
@@ -25,6 +26,8 @@ import jakarta.validation.Valid;
 public class WalletController {
     @Autowired
     private WalletRepository walletRepository;
+    @Autowired
+    private IUserClientService userClientService;
     
     @GetMapping("/wallets/{id}")
     public ResponseEntity<?> fetchWalletById(@PathVariable("id") @NonNull Long walletId){
@@ -43,9 +46,7 @@ public class WalletController {
         try{
             wallet = walletRepository.findById(walletId).get();
         } catch (NoSuchElementException e){
-            // TODO: API Request
-            // API request to check user exist or not
-            // If not exist then return from here
+            userClientService.getUserById(walletId);
             wallet = new Wallet(walletId, 0L);
         }
 
