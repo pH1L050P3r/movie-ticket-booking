@@ -9,8 +9,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.booking.user.dto.UserDTO;
 import com.booking.user.dto.UserRequest;
-import com.booking.user.models.User;
 import com.booking.user.service.UserService;
 import org.springframework.web.bind.annotation.GetMapping;
 
@@ -27,15 +27,17 @@ public class UserController {
         if (userService.existsByEmail(request.getEmail()))
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("User with email already exists");
 		
-		User createdUser = userService.createUser(request.getName(), request.getEmail());
+		UserDTO createdUser = userService.createUser(request.getName(), request.getEmail());
 		return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
 	}
 
     @GetMapping("/users/{userId}")
     public ResponseEntity<?> getUserEntity(@PathVariable("userId") Long userId) {
-        if (!userService.isUserExists(userId))
+        try{
+            return ResponseEntity.status(HttpStatus.OK).body(userService.getUserById(userId));
+        } catch(Exception e){
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
-        return ResponseEntity.status(HttpStatus.OK).body(userService.getUserById(userId));
+        }
     }
 	
 	@DeleteMapping("/users/{userId}")

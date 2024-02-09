@@ -3,6 +3,8 @@ package com.booking.user.service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.booking.user.dto.UserDTO;
+import com.booking.user.mapper.UserMapper;
 import com.booking.user.models.User;
 import com.booking.user.repository.UserRepository;
 import com.booking.user.service.IWalletClientService;
@@ -16,9 +18,10 @@ public class UserService {
 	private IWalletClientService walletClientService;
 
 	
-	public User createUser(String userName, String email) {
+	public UserDTO createUser(String userName, String email) {
 		User user = new User(userName, email);
-		return userRepository.save(user);
+		userRepository.save(user);
+		return UserMapper.mapUserToUserDTO(user);
 	}
 	
 	public boolean deleteUser(Long userId) {
@@ -29,6 +32,15 @@ public class UserService {
 		userRepository.deleteById(userId);
 		return true;
     }
+
+	public boolean isUserExists(Long userId){
+		return userRepository.existsById(userId);
+	}
+
+	public UserDTO getUserById(Long userId){
+		User user = userRepository.findById(userId).get();
+		return UserMapper.mapUserToUserDTO(user);
+	}
 
 	public boolean existsByEmail(String email) {
 		return userRepository.existsByEmail(email);
