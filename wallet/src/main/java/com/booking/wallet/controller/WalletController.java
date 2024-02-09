@@ -1,7 +1,5 @@
 package com.booking.wallet.controller;
 
-import java.util.NoSuchElementException;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,11 +11,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.lang.NonNull;
 
-import com.booking.wallet.enums.Action;
-import com.booking.wallet.models.UpdateWalletBody;
-import com.booking.wallet.models.Wallet;
-import com.booking.wallet.repositories.WalletRepository;
-import com.booking.wallet.services.IUserClientService;
+import com.booking.wallet.dto.UpdateWalletBody;
+import com.booking.wallet.dto.WalletDTO;
+import com.booking.wallet.services.IWalletService;
 
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
@@ -25,16 +21,14 @@ import jakarta.validation.Valid;
 @RestController
 public class WalletController {
     @Autowired
-    private WalletRepository walletRepository;
-    @Autowired
-    private IUserClientService userClientService;
+    private IWalletService walletService;
     
     @GetMapping("/wallets/{id}")
     public ResponseEntity<?> fetchWalletById(@PathVariable("id") @NonNull Long walletId){
         try{
-            Wallet wallet = walletRepository.findById(walletId).get();
-            return new ResponseEntity<Wallet> (wallet, HttpStatus.OK);
-        } catch(NoSuchElementException e){
+            WalletDTO wallet = walletService.getWalletById(walletId);
+            return new ResponseEntity<WalletDTO> (wallet, HttpStatus.OK);
+        } catch(Exception e){
             return new ResponseEntity<HttpStatus> (HttpStatus.NOT_FOUND);
         }
     }
@@ -42,36 +36,31 @@ public class WalletController {
     @Transactional
     @PutMapping("/wallets/{id}")
     public ResponseEntity<?> updateWallet(@Valid @RequestBody UpdateWalletBody requestBody, @PathVariable("id") @NonNull Long walletId){
-        Wallet wallet;
         try{
-            wallet = walletRepository.findById(walletId).get();
-        } catch (NoSuchElementException e){
-            userClientService.getUserById(walletId);
-            wallet = new Wallet(walletId, 0L);
-        }
-
-        if(requestBody.action == Action.credit)
-            wallet.setBalance(wallet.getBalance() + requestBody.amount);
-        else if(requestBody.action == Action.debit && requestBody.amount <= wallet.getBalance())
-            wallet.setBalance(wallet.getBalance() - requestBody.amount);
-        else 
+            WalletDTO wallet = walletService.updateWallet(walletId, requestBody.amount, requestBody.action);
+            return new ResponseEntity<WalletDTO>(wallet, HttpStatus.OK);
+        } catch (Exception e){
             return new ResponseEntity<HttpStatus>(HttpStatus.BAD_REQUEST);
-
-        wallet = walletRepository.save(wallet);
-        return new ResponseEntity<Wallet>(wallet, HttpStatus.OK);
+        }
     }
 
     @DeleteMapping("/wallets/{id}")
     public ResponseEntity<HttpStatus> deleteWalletById(@PathVariable("id") @NonNull Long walletId){
-        if(!walletRepository.existsById(walletId))
+        try{
+            walletService.deleteWalletById(walletId);
+            return new ResponseEntity<HttpStatus>(HttpStatus.OK);
+        } catch(Exception e){
             return new ResponseEntity<HttpStatus>(HttpStatus.NOT_FOUND);
-        walletRepository.deleteById(walletId);
-        return new ResponseEntity<HttpStatus>(HttpStatus.OK);
+        }
     }
 
     @DeleteMapping("/wallets")
     public ResponseEntity<HttpStatus> deleteAllWallet(){
-        walletRepository.deleteAll();
-        return new ResponseEntity<HttpStatus>(HttpStatus.OK);
+        try{
+            walletService.deleteAllWallets();
+            return new ResponseEntity<HttpStatus>(HttpStatus.OK);
+        } catch(Exception e){
+            return new ResponseEntity<HttpStatus>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }
