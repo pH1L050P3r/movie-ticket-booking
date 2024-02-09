@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.booking.user.dto.UserDTO;
+import com.booking.user.enums.Action;
 import com.booking.user.mapper.UserMapper;
 import com.booking.user.models.User;
 import com.booking.user.repository.UserRepository;
@@ -20,7 +21,8 @@ public class UserService {
 	
 	public UserDTO createUser(String userName, String email) {
 		User user = new User(userName, email);
-		userRepository.save(user);
+		user = userRepository.save(user);
+		walletClientService.updateUserWalletMoney(user.getId(), 0L, Action.credit);
 		return UserMapper.mapUserToUserDTO(user);
 	}
 	
