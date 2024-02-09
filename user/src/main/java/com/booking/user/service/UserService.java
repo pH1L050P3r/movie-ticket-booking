@@ -8,7 +8,6 @@ import com.booking.user.enums.Action;
 import com.booking.user.mapper.UserMapper;
 import com.booking.user.models.User;
 import com.booking.user.repository.UserRepository;
-import com.booking.user.service.IWalletClientService;
 
 @Service
 public class UserService {
@@ -17,6 +16,8 @@ public class UserService {
 	private UserRepository userRepository;
 	@Autowired
 	private IWalletClientService walletClientService;
+	@Autowired
+	private IBookingClientService bookingClientService;
 
 	
 	public UserDTO createUser(String userName, String email) {
@@ -29,7 +30,7 @@ public class UserService {
 	public boolean deleteUser(Long userId) {
 		if(!userRepository.existsById(userId)) 
 			return false;
-		// bookingClientService.deleteBookingsByUserId(userId);
+		bookingClientService.deleteBookingsByUserId(userId);
 		walletClientService.deleteWalletById(userId);
 		userRepository.deleteById(userId);
 		return true;
@@ -49,7 +50,7 @@ public class UserService {
 	}
 
 	public void deleteAllUsers() {
-		// bookingClientService.deleteAllBookings();
+		bookingClientService.deleteAllBookings();
 		walletClientService.deleteAllWallets();
 		userRepository.deleteAllInBatch();
 	}
