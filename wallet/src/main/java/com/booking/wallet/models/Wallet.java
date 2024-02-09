@@ -6,9 +6,15 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "wallet")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Wallet {
     
     @Id
@@ -18,28 +24,4 @@ public class Wallet {
 
     @Column(name = "balance")
     private Long balance;
-
-    protected Wallet() {}
-
-    public Wallet(Long userId, Long balance){
-        this.userId = userId;
-        this.balance = balance;
-    }
-
-    public Long getUserId(){
-        return this.userId;
-    }
-
-    public void serUserId(Long userId){
-        this.userId = userId;
-    }
-
-    public Long getBalance(){
-        return this.balance;
-    }
-
-    public void setBalance(Long balance){
-        this.balance = balance;
-    }
-
 }
