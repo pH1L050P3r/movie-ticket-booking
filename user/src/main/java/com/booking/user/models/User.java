@@ -1,5 +1,8 @@
 package com.booking.user.models;
 
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotNull;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -17,11 +20,15 @@ public class User {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Integer id;
+	private Long id;
 	
-	//Todo : name cannot be empty
+	
+	@NotNull
+	@Column(nullable = false)
 	private String name;
-	//Todo : add unique and check string is in email format or not
+
+	@Column(unique = true)
+	@Email(regexp = "[A-Za-z0-9.]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,3}")
 	private String email;
 
 	public User(String name, String email){

@@ -19,7 +19,7 @@ public class UserService {
 		return userRepository.save(user);
 	}
 	
-	public boolean deleteUser(Integer userId) {
+	public boolean deleteUser(Long userId) {
 		if(!userRepository.existsById(userId)) 
 			return false;
 		userRepository.deleteById(userId);
@@ -41,12 +41,20 @@ public class UserService {
 		}
 	}
 
-	private void deleteWallet(Integer userId){
+	private void deleteWallet(Long userId){
 		//Todo : http request to wallet service and delete wallet
 	}
 
-	private void deleteUserBookings(Integer userId){
+	private void deleteUserBookings(Long userId){
 		//Todo: http request to booking service and delete bookings
+	}
+
+	public User getUserById(Long userId){
+		return userRepository.findById(userId).get();
+	}
+
+	public boolean isUserExists(Long userId){
+		return userRepository.existsById(userId);
 	}
 
 }
