@@ -59,14 +59,14 @@ public class WalletClientService implements IWalletClientService {
     }
 
     @Override
-    public String fetchWalletByUserId(Long userId){
-        String uri = "/" + Long.toString(userId);
+    public String fetchWalletById(Long walletId){
+        String uri = "/" + Long.toString(walletId);
         return this.get(uri);
     }
 
     @Override
-    public String updateUserWalletMoney(Long amount, Long userId, Action action) {
-        String uri = "/" + Long.toString(userId);
+    public String updateUserWalletMoney(Long amount, Long walletId, Action action) {
+        String uri = "/" + Long.toString(walletId);
         Map<String, String> data = new HashMap<String, String>();
         data.put("action", action.toString());
         data.put("amount", Long.toString(amount));
@@ -74,13 +74,13 @@ public class WalletClientService implements IWalletClientService {
     }
 
     @Override
-    public String deleteUserById(Long userId){
+    public String deleteWalletById(Long userId){
         String uri = "/" + Long.toString(userId);
         return this.delete(uri);
     }
 
     @Override
-    public String deleteAllUser(Long userId){
+    public String deleteAllWallet(Long userId){
         String uri = baseUrl;
         return this.delete(uri);
     }

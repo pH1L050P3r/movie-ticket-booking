@@ -21,7 +21,7 @@ public class ShowService implements IShowService {
         );
     }
 
-    public List<ShowDTO> getAllShowShowcasedByThreater(Long theatreId){
+    public List<ShowDTO> getAllShowShowcasedByTheater(Long theatreId){
         return showRepositories.findAllByTheatreId(theatreId).stream().map(
             show -> {return ShowMapper.showToShowDTO(show);}
         ).collect(Collectors.toList());

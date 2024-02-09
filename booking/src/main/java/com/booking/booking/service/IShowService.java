@@ -6,5 +6,5 @@ import com.booking.booking.dto.ShowDTO;
 
 public interface IShowService {
     public ShowDTO getShowById(Long showId);
-    public List<ShowDTO> getAllShowShowcasedByThreater(Long theatreId);
+    public List<ShowDTO> getAllShowShowcasedByTheater(Long theatreId);
 }
