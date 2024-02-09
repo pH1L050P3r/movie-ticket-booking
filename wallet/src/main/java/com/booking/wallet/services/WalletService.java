@@ -37,9 +37,13 @@ public class WalletService implements IWalletService {
             wallet = new Wallet(walletId, 0L);
         }
 
-        if(action == Action.credit) wallet.setBalance(wallet.getBalance() + amount);
-        else if(action == Action.debit && amount <= wallet.getBalance()) wallet.setBalance(wallet.getBalance() - amount);
-        else throw new Exception("error while parsing request data");
+        if(action == Action.credit) 
+            wallet.setBalance(wallet.getBalance() + amount);
+        else if(action == Action.debit && amount <= wallet.getBalance()) 
+            wallet.setBalance(wallet.getBalance() - amount);
+        else 
+            throw new Exception("error while parsing request data");
+            
         wallet = walletRepository.save(wallet);
         return WallerMapper.WalletToWalletDTO(wallet);
     }

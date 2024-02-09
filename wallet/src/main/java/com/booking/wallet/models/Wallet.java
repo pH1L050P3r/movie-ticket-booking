@@ -19,7 +19,6 @@ public class Wallet {
     
     @Id
     @Column(name = "user_id")
-    @JsonProperty("user_id")
     private Long userId;
 
     @Column(name = "balance")
