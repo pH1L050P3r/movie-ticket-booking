@@ -16,8 +16,8 @@ import lombok.NoArgsConstructor;
 
 
 @Entity
-@Data
 @Table(name = "show")
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class Show {

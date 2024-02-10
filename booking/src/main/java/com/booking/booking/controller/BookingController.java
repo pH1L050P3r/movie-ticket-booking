@@ -26,13 +26,13 @@ public class BookingController {
 
     @GetMapping("/bookings/users/{user_id}")
     public ResponseEntity<List<BookingResponseDTO>> getUserAllBooking(@PathVariable("user_id") Long userId){
-        return new ResponseEntity<>(bookingService.getUserBookings(userId), HttpStatus.OK);
+        return new ResponseEntity<>(bookingService.getByUserId(userId), HttpStatus.OK);
     }
 
     @PostMapping("/bookings")
     public ResponseEntity<?> createUserBooking(@Valid @RequestBody BookingCreateRequestDTO bookingRequest){
         try{
-            bookingService.createBooking(bookingRequest);
+            bookingService.create(bookingRequest);
             return new ResponseEntity<HttpStatus>(HttpStatus.CREATED);
         } catch(Exception e){
             return new ResponseEntity<HttpStatus>(HttpStatus.BAD_REQUEST);
@@ -42,7 +42,7 @@ public class BookingController {
     @DeleteMapping("/bookings/users/{user_id}")
     public ResponseEntity<?> deleteUserAllBookings(@PathVariable("user_id") Long userId){
         try{
-            bookingService.deleteUserBookings(userId);
+            bookingService.deleteByUserId(userId);
             return new ResponseEntity<HttpStatus>(HttpStatus.OK);
         } catch(Exception e){
             return new ResponseEntity<HttpStatus>(HttpStatus.NOT_FOUND);
@@ -52,7 +52,7 @@ public class BookingController {
     @DeleteMapping("/bookings/users/{user_id}/shows/{show_id}")
     public ResponseEntity<?> deleteUserAllBookingAssociatedWithShow(@PathVariable("user_id") Long userId, @PathVariable("show_id") Long showId){
         try{
-            bookingService.deleteUserShowBookings(userId, showId);
+            bookingService.deleteByUserIdAndShowId(userId, showId);
             return new ResponseEntity<HttpStatus>(HttpStatus.OK);
         } catch(Exception e){
             return new ResponseEntity<HttpStatus>(HttpStatus.NOT_FOUND);
@@ -62,7 +62,7 @@ public class BookingController {
     @DeleteMapping("/bookings")
     public ResponseEntity<?> deleteAllBookings(){
         try{
-            bookingService.deleteAllBookings();;
+            bookingService.deleteAll();;
             return new ResponseEntity<HttpStatus>(HttpStatus.OK);
         } catch(Exception e){
             return new ResponseEntity<HttpStatus>(HttpStatus.NOT_FOUND);

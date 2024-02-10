@@ -30,10 +30,10 @@ public class BookingService implements IBookingService {
     @Autowired
     private IWalletClientService walletClientService;
 
-    public BookingResponseDTO createBooking(BookingCreateRequestDTO bookingRequestData) throws WallerServiceException, BookingServiceException{
+    public BookingResponseDTO create(BookingCreateRequestDTO bookingRequestData) throws WallerServiceException, BookingServiceException{
         Booking booking = new Booking();
         Show show;
-        Long price = 0L;
+        Long amount = 0L;
 
         //Todo : Check user exists or not
         try{
@@ -50,11 +50,11 @@ public class BookingService implements IBookingService {
         booking.setShow(show);
         show.setSeatsAvailable(show.getSeatsAvailable() - booking.getSeatsBooked());
         
-        price += show.getPrice() * booking.getSeatsBooked();
+        amount += show.getPrice() * booking.getSeatsBooked();
         
-        //debit money from Wallet with price
+        //debit money from Wallet with amount
         try{
-            walletClientService.updateUserWalletMoney(price, bookingRequestData.getUserId(), Action.debit);
+            walletClientService.updateByUserId(amount, bookingRequestData.getUserId(), Action.debit);
         } catch(Exception e){
             throw new WallerServiceException(e.getMessage());
         }
@@ -63,24 +63,24 @@ public class BookingService implements IBookingService {
         return BookingMapper.mapBookingToBookingResponseDTO(booking);
     }
 
-    public List<BookingResponseDTO> getUserBookings(Long userId){
+    public List<BookingResponseDTO> getByUserId(Long userId){
         List<BookingResponseDTO> bookings = new ArrayList<BookingResponseDTO>();
         for(Booking booking: bookingRepositories.findAllByUserId(userId))
             bookings.add(BookingMapper.mapBookingToBookingResponseDTO(booking));
         return bookings;
     }
 
-    public void deleteUserBookings(Long userId) throws BookingServiceException{
+    public void deleteByUserId(Long userId) throws BookingServiceException{
         List<Booking> bookings = bookingRepositories.findAllByUserId(userId);
         this.deleteBookingHelper(bookings);
     }
 
-    public void deleteUserShowBookings(Long userId, Long showId) throws BookingServiceException{
+    public void deleteByUserIdAndShowId(Long userId, Long showId) throws BookingServiceException{
         List<Booking> bookings = bookingRepositories.findAllByUserIdAndShowId(userId, showId);
         this.deleteBookingHelper(bookings);
     }
 
-    public void deleteAllBookings() throws BookingServiceException{
+    public void deleteAll() throws BookingServiceException{
         try{
             List<Booking> booking = bookingRepositories.findAll();
             this.deleteBookingHelper(booking);
@@ -109,7 +109,7 @@ public class BookingService implements IBookingService {
         }
         //API request to Add money in Wallet
         for(Long userId : userAmountRefund.keySet()){
-            walletClientService.updateUserWalletMoney(userAmountRefund.get(userId), userId, Action.credit);
+            walletClientService.updateByUserId(userAmountRefund.get(userId), userId, Action.credit);
         }
         bookingRepositories.deleteAll(bookings);
     }

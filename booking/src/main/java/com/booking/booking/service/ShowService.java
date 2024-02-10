@@ -15,13 +15,13 @@ public class ShowService implements IShowService {
     @Autowired
     private ShowRepositories showRepositories;
 
-    public ShowDTO getShowById(Long showId){
+    public ShowDTO getById(Long showId){
         return ShowMapper.showToShowDTO(
             showRepositories.findById(showId).get()
         );
     }
 
-    public List<ShowDTO> getAllShowShowcasedByTheater(Long theatreId){
+    public List<ShowDTO> getAllByTheaterId(Long theatreId){
         return showRepositories.findAllByTheatreId(theatreId).stream().map(
             show -> {return ShowMapper.showToShowDTO(show);}
         ).collect(Collectors.toList());

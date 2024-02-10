@@ -9,9 +9,9 @@ import com.booking.booking.exceptions.BookingServiceException;
 import com.booking.booking.exceptions.WallerServiceException;
 
 public interface IBookingService {
-    public BookingResponseDTO createBooking(BookingCreateRequestDTO bookingRequestData)throws WallerServiceException,BookingServiceException;
-    public List<BookingResponseDTO> getUserBookings(Long userId);
-    public void deleteUserBookings(Long userId) throws BookingServiceException;
-    public void deleteUserShowBookings(Long userId, Long showId) throws BookingServiceException;
-    public void deleteAllBookings() throws BookingServiceException;
+    public BookingResponseDTO create(BookingCreateRequestDTO bookingRequestData)throws WallerServiceException,BookingServiceException;
+    public List<BookingResponseDTO> getByUserId(Long userId);
+    public void deleteByUserId(Long userId) throws BookingServiceException;
+    public void deleteByUserIdAndShowId(Long userId, Long showId) throws BookingServiceException;
+    public void deleteAll() throws BookingServiceException;
 }

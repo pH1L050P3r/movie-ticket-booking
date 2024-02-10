@@ -16,7 +16,7 @@ import org.springframework.lang.NonNull;
 
 @Service
 public class WalletClientService implements IWalletClientService {
-    private @NonNull String baseUrl = "http://host.docker.internal:8082/wallets";
+    private @NonNull String baseUrl = "http://host.docker.internal:8082";
     private final WebClient webClient;
 
     public WalletClientService() {
@@ -36,52 +36,12 @@ public class WalletClientService implements IWalletClientService {
         );
     }
 
-    private String get(@NonNull String uri){
-        return (
-            webClient.get()
-            .uri(uri)
-            .accept(MediaType.APPLICATION_JSON)
-            .retrieve()
-            .bodyToMono(String.class)
-            .block()
-        );
-    }
-
-    private String delete(@NonNull String uri){
-        return (
-            webClient.delete()
-            .uri(uri)
-            .accept(MediaType.APPLICATION_JSON)
-            .retrieve()
-            .bodyToMono(String.class)
-            .block()
-        );
-    }
-
     @Override
-    public String fetchWalletById(Long walletId){
-        String uri = "/" + Long.toString(walletId);
-        return this.get(uri);
-    }
-
-    @Override
-    public String updateUserWalletMoney(Long amount, Long walletId, Action action) {
-        String uri = "/" + Long.toString(walletId);
+    public String updateByUserId(Long amount, Long walletId, Action action) {
+        String uri = "/wallets/" + Long.toString(walletId);
         Map<String, String> data = new HashMap<String, String>();
         data.put("action", action.toString());
         data.put("amount", Long.toString(amount));
         return this.put(uri, data);
-    }
-
-    @Override
-    public String deleteWalletById(Long userId){
-        String uri = "/" + Long.toString(userId);
-        return this.delete(uri);
-    }
-
-    @Override
-    public String deleteAllWallet(Long userId){
-        String uri = baseUrl;
-        return this.delete(uri);
     }
 }

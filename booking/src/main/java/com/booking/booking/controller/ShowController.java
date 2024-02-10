@@ -21,7 +21,7 @@ public class ShowController {
     @GetMapping("/shows/{show_id}")
     public ResponseEntity<?> getShowById(@PathVariable("show_id") Long showId){
         try{
-            ShowDTO show = showService.getShowById(showId);   
+            ShowDTO show = showService.getById(showId);   
             return new ResponseEntity<ShowDTO> (show, HttpStatus.OK);
         } catch(Exception e){
             return new ResponseEntity<HttpStatus>(HttpStatus.BAD_REQUEST);
@@ -31,7 +31,7 @@ public class ShowController {
     @GetMapping("/shows/theatres/{theatre_id}")
     public ResponseEntity<?> getAllShowShowcasedByTheater(@PathVariable("theatre_id") Long theatreId){
         try{
-            List<ShowDTO> shows = showService.getAllShowShowcasedByTheater(theatreId);
+            List<ShowDTO> shows = showService.getAllByTheaterId(theatreId);
             return new ResponseEntity<List<ShowDTO>>(shows, HttpStatus.OK);
         } catch(Exception e){
             return new ResponseEntity<HttpStatus>(HttpStatus.BAD_REQUEST);

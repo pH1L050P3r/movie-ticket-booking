@@ -23,6 +23,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class Theatre {
     @Id
+    @Column(name = "id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
