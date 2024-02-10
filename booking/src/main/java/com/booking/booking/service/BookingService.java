@@ -13,7 +13,6 @@ import com.booking.booking.dto.BookingCreateRequestDTO;
 import com.booking.booking.dto.BookingResponseDTO;
 import com.booking.booking.enums.Action;
 import com.booking.booking.exceptions.BookingServiceException;
-import com.booking.booking.exceptions.WallerServiceException;
 import com.booking.booking.mapper.BookingMapper;
 import com.booking.booking.models.Booking;
 import com.booking.booking.models.Show;
@@ -29,13 +28,21 @@ public class BookingService implements IBookingService {
     private ShowRepositories showRepositories;
     @Autowired
     private IWalletClientService walletClientService;
+    @Autowired
+    private IUserClientService userClientService;
 
-    public BookingResponseDTO create(BookingCreateRequestDTO bookingRequestData) throws WallerServiceException, BookingServiceException{
+    public BookingResponseDTO create(BookingCreateRequestDTO bookingRequestData) throws BookingServiceException{
         Booking booking = new Booking();
         Show show;
         Long amount = 0L;
 
-        //Todo : Check user exists or not
+        try{
+            userClientService.getUserById(bookingRequestData.getUserId());
+        } catch(Exception e){
+            //User does not exist so does not create any booking
+            throw new BookingServiceException("User does not exists");
+        }
+        
         try{
             show = showRepositories.findById(bookingRequestData.getShowId()).get();
         } catch(NoSuchElementException e){
@@ -52,11 +59,11 @@ public class BookingService implements IBookingService {
         
         amount += show.getPrice() * booking.getSeatsBooked();
         
-        //debit money from Wallet with amount
+        //debit money from Wallet equals amount
         try{
             walletClientService.updateByUserId(amount, bookingRequestData.getUserId(), Action.debit);
         } catch(Exception e){
-            throw new WallerServiceException(e.getMessage());
+            throw new BookingServiceException(e.getMessage());
         }
 
         bookingRepositories.save(booking);
@@ -107,7 +114,7 @@ public class BookingService implements IBookingService {
             show.setSeatsAvailable(show.getSeatsAvailable() + booking.getSeatsBooked());
             userAmountRefund.put(booking.getUserId(), userAmountRefund.get(booking.getUserId()) + show.getPrice()*booking.getSeatsBooked());
         }
-        //API request to Add money in Wallet
+        //API request to Add money back into Wallet for all users
         for(Long userId : userAmountRefund.keySet()){
             walletClientService.updateByUserId(userAmountRefund.get(userId), userId, Action.credit);
         }
