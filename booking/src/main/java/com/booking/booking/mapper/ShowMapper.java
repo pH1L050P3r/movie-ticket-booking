@@ -7,7 +7,7 @@ public class ShowMapper {
     public static ShowDTO showToShowDTO(Show show){
         return new ShowDTO(
             show.getId(),
-            show.getTheatreId(),
+            show.getTheatre().getId(),
             show.getTitle(),
             show.getPrice(),
             show.getSeatsAvailable()

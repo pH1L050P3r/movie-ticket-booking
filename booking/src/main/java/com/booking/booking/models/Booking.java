@@ -29,7 +29,7 @@ public class Booking {
     private Long id;
 
     @ManyToOne(fetch = FetchType.EAGER, cascade = CascadeType.MERGE)
-    @JoinColumn(name = "show_id", nullable = true)
+    @JoinColumn(name = "show_id", nullable = false)
     private Show show;
 
     @Column(name = "user_id")

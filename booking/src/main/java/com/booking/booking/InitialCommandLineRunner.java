@@ -25,6 +25,8 @@ public class InitialCommandLineRunner implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
+        //Function to load data from theatres.csv and shows.csv into database
+        
         String csvFilePathTheatres = "theatres.csv";
         String csvFilePathShows ="shows.csv";
         try (
@@ -48,11 +50,12 @@ public class InitialCommandLineRunner implements CommandLineRunner {
             for (String[] record : showRecords) {
 				Long id = Long.valueOf(record[0]);
                 Long theatreId = Long.valueOf(record[1]);
+                Theatre theatre = theatreRepositories.findById(theatreId).get();
                 String title = record[2];
                 Long price = Long.valueOf(record[3]);
                 Long seatsAvailable = Long.valueOf(record[4]);
                 if (!showRepositories.existsById(id)) {
-					shows.add(new Show(id, theatreId, title, price, seatsAvailable));
+					shows.add(new Show(id, theatre, title, price, seatsAvailable));
                 }
             }
 			showRepositories.saveAll(shows);
