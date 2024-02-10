@@ -81,8 +81,12 @@ public class BookingService implements IBookingService {
     }
 
     public void deleteAllBookings() throws BookingServiceException{
-        List<Booking> booking = bookingRepositories.findAll();
-        this.deleteBookingHelper(booking);
+        try{
+            List<Booking> booking = bookingRepositories.findAll();
+            this.deleteBookingHelper(booking);
+        } catch(BookingServiceException e){
+            
+        }
     }
 
     private void deleteBookingHelper(List<Booking> bookings) throws BookingServiceException{
