@@ -30,10 +30,19 @@ public class WalletService implements IWalletService {
     @Override
     public WalletDTO updateWallet(@NonNull Long walletId, Long amount, Action action) throws Exception {
         Wallet wallet;
+
+        try{
+            userClientService.getUserById(walletId);
+        } catch(Exception e){
+            // If user not exists then wallet also not exist
+            // So return from here
+            throw new Exception("Wallet not exists.");
+        }
+
         try{
             wallet = walletRepository.findById(walletId).get();
         } catch (NoSuchElementException e){
-            userClientService.getUserById(walletId);
+            // If user exist and wallet does not exist then create wallet for user
             wallet = new Wallet(walletId, 0L);
         }
 

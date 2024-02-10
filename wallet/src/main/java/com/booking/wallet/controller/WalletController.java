@@ -40,8 +40,7 @@ public class WalletController {
             WalletDTO wallet = walletService.updateWallet(walletId, requestBody.amount, requestBody.action);
             return new ResponseEntity<WalletDTO>(wallet, HttpStatus.OK);
         } catch (Exception e){
-            WalletDTO wallet = walletService.getWalletById(walletId);
-            return new ResponseEntity<WalletDTO>(wallet, HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<HttpStatus>(HttpStatus.BAD_REQUEST);
         }
     }
 
