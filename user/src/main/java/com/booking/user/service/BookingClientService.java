@@ -1,9 +1,13 @@
 package com.booking.user.service;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
+
+import com.booking.user.exceptions.BookingNotFoundException;
 
 @Service
 public class BookingClientService implements IBookingClientService{
@@ -25,9 +29,15 @@ public class BookingClientService implements IBookingClientService{
         );
     }
 
-    public String deleteBookingsByUserId(Long userId){
+    public String deleteBookingsByUserId(Long userId) throws BookingNotFoundException {
         String uri = "/" + Long.toString(userId);
-        return this.delete(uri);
+        try{
+            return this.delete(uri);
+        } catch (WebClientResponseException ex) {
+            if (ex.getStatusCode() == HttpStatus.NOT_FOUND)
+                throw new BookingNotFoundException("Booking not found for Specified User");
+            throw ex;
+        }
     }
 
     public String deleteAllBookings(){

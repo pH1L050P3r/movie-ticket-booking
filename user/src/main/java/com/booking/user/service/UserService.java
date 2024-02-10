@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 
 import com.booking.user.dto.UserDTO;
 import com.booking.user.enums.Action;
+import com.booking.user.exceptions.BookingNotFoundException;
 import com.booking.user.mapper.UserMapper;
 import com.booking.user.models.User;
 import com.booking.user.repository.UserRepository;
@@ -30,7 +31,13 @@ public class UserService {
 	public boolean deleteUser(Long userId) {
 		if(!userRepository.existsById(userId)) 
 			return false;
-		bookingClientService.deleteBookingsByUserId(userId);
+		
+		try{
+			bookingClientService.deleteBookingsByUserId(userId);
+		}catch(BookingNotFoundException e){
+			//Booking microservice returns 404 if no booking found for user else delete's all booking
+			//so BookingClientService throws BookingNotFoundException if micro services returns 404 
+		}
 		walletClientService.deleteWalletById(userId);
 		userRepository.deleteById(userId);
 		return true;
