@@ -16,7 +16,7 @@ import org.springframework.lang.NonNull;
 
 @Service
 public class WalletClientService implements IWalletClientService {
-    private @NonNull String baseUrl = "http://host.docker.internal:8082/wallets";
+    private @NonNull String baseUrl = "http://host.docker.internal:8082";
     private final WebClient webClient;
 
     public WalletClientService() {
@@ -49,7 +49,7 @@ public class WalletClientService implements IWalletClientService {
 
     @Override
     public String updateUserWalletMoney(Long userId, Long amount, Action action) {
-        String uri = "/" + Long.toString(userId);
+        String uri = "/wallets/" + Long.toString(userId);
         Map<String, String> data = new HashMap<String, String>();
         data.put("action", action.toString());
         data.put("amount", Long.toString(amount));
@@ -58,13 +58,13 @@ public class WalletClientService implements IWalletClientService {
 
     @Override
     public String deleteWalletById(Long walletId){
-        String uri = "/" + Long.toString(walletId);
+        String uri = "/wallets/" + Long.toString(walletId);
         return this.delete(uri);
     }
 
     @Override
     public String deleteAllWallets(){
-        String uri = "";
+        String uri = "/wallets";
         return this.delete(uri);
     }
 }
