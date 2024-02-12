@@ -12,6 +12,9 @@ import org.springframework.web.bind.annotation.RestController;
 import com.booking.user.dto.UserDTO;
 import com.booking.user.dto.UserRequest;
 import com.booking.user.service.UserService;
+
+import jakarta.validation.Valid;
+
 import org.springframework.web.bind.annotation.GetMapping;
 
 
@@ -22,7 +25,7 @@ public class UserController {
 	private UserService userService;
 	
 	@PostMapping("/users")
-	public ResponseEntity<?> createUser(@RequestBody UserRequest request) {
+	public ResponseEntity<?> createUser(@Valid @RequestBody UserRequest request) {
         // Check if user with email already exists
         if (userService.existsByEmail(request.getEmail()))
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("User with email already exists");
