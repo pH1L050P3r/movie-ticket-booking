@@ -11,54 +11,67 @@ RED = '\033[91m'
 RESET = '\033[0m'
 GREEN = '\u001b[32m'
 
-
-
-name = "Alice"
-email = "alice@example.com"
+USER_FIRST = {
+    "name" : "Alice",
+    "email" : "alice@example.com"
+}
 
 USER_SECOND = {
     "name" : "Bod",
     "email" : "bob@example.com"
 }
 
+fail_print = lambda message : print(f"{message} : " + RED + "FAIL" + RESET)
+pass_print = lambda message : print(f"{message} : " + GREEN + "PASS" + RESET)
+
 
 ############################################# USER END POINTS ###########################################
 #Create User
 def create_user(name, email):
-    delete_all_users()
-    new_user = {"name": name, "email": email}
-    response = requests.post(userServiceURL + "/users", json=new_user)
-    return response
+    return requests.post(userServiceURL + "/users", json={"name": name, "email": email})
+
+
+#Delete Users
+def delete_all_users():
+    return requests.delete(userServiceURL+f"/users") 
+
 
 #Delete User
-def delete_all_users():
-    requests.delete(userServiceURL+f"/users") 
+def delete_user(user_id):
+    return requests.delete(userServiceURL + "/users/" + str(user_id))
+
 
 #Get User
 def get_user(user_id):
-    response = requests.get(userServiceURL + "/users/" + str(user_id))
-    return response
+    return requests.get(userServiceURL + "/users/" + str(user_id))
+
+#Get Wallet
+def get_wallet(walletId):
+    return requests.get(walletServiceURL + "/wallets/" + str(walletId))
+
 
 ################################################# TESTING ##############################################
 
 # Test case for creating a new user with valid data
 def test_create_user():
     delete_all_users()
-    response_valid = create_user(name, email)
+    response_valid = create_user(USER_FIRST.get("name"), USER_FIRST.get("email"))
     if(response_valid.status_code != 201):
-        print(RED + "Failed to create user with valid data" + RESET)
+        fail_print("Test Create User")
     else:
-        print("Status Code :", response_valid.status_code)
-        print("Valid user creation response:", response_valid.json())
+        pass_print("Test Create User")
 
 
 # Test case for creating ag user with an existing email
 def test_existing_email():
-    response_existing_email = create_user(name, email)
-    if(response_existing_email.status_code == 400):
-        print(RED + "Creating user with existing email should return 400" + RESET)
+    delete_all_users()
+    response_user = create_user(USER_FIRST.get("name"), USER_FIRST.get("email"))
+    response_existing_email = create_user(USER_FIRST.get("name"), USER_FIRST.get("email"))
+
+    if(response_existing_email.status_code != 400):
+        fail_print("Test Create User with existing email")
     else:
-        print("User creation with existing email response:", response_existing_email.status_code)
+        pass_print("Test Create User with existing email")
 
 
 # Test case for creating a user with missing name
@@ -67,9 +80,9 @@ def test_missing_name():
     email_missing_name = "bob@example.com"
     response_missing_name = create_user("", email_missing_name)
     if(response_missing_name.status_code == 400):
-        print(RED + "Creating user with missing name should return 400" + RESET)
+        pass_print("Test Create User with missing name")
     else:
-        print("User creation with missing name response:", response_missing_name.status_code)
+        fail_print("Test Create User with missing name")
 
 
 # Test case for creating a user with missing email
@@ -78,54 +91,84 @@ def test_missing_email():
     name_missing_email = "Bob"
     response_missing_email = create_user(name_missing_email, "")
     if(response_missing_email.status_code != 400):
-        print(RED + "Creating user with missing email should return 400" + RESET)
+        fail_print("Test Create User with missing email")
     else:
-        print("User creation with missing email response:", response_missing_email.status_code)
+        pass_print("Test Create User with missing email")
 
-def check_email_format():
+def test_check_email_format():
     delete_all_users()
     # Test case for valid Email format
     name = "Bob"
     email = "invalid_email"
     response = create_user(name, email)
     if(response.status_code != 400):
-        print(RED + "Creating user with invalid email format should return 400" + RESET)
+        fail_print("Test Create User with invalid email")
     else:
-        print("User creation with invalid email format response:", response.status_code)
+        pass_print("Test Create User with invalid email")
     
 def test_missing_name_and_email():
-    delete_all_users()
     # Test case for empty name and email
+    delete_all_users()
     name = ""
     email = ""
     response = create_user(name, email)
     if(response.status_code != 400):
-        print(RED + "Creating user with empty name and email should return 400" + RESET)
+        print("Test Create User with missing email and name : " + RED + "FAIL" + RESET)
     else:
-         print("User creation with empty name and email response:", response.status_code)
+        print("Test Create User with invalid email : " + GREEN + "PASS" + RESET)
 
-def test_get_user_existing():
+def test_get_existing_user():
     delete_all_users()
     user = create_user(USER_SECOND.get("name"), USER_SECOND.get("email"))
-    if(user.status_code != 201):
-        print(RED + "Failed to get existing user" + RESET)
 
     response = get_user(user.json().get("id"))
     if(response.status_code != 200):
-        print(RED + "Failed to get existing user" + RESET)
+        fail_print("Test Get existing user")
     else:
-       print("Get existing user response:", response.json())
+        pass_print("Test Get existing user")
+    
+def test_delete_user():
+    delete_all_users()
+    response_user = create_user(USER_SECOND.get("name"), USER_SECOND.get("email"))
+    delete_user(response_user.json().get("id"))
+    response_existing_user = get_user(response_user.json().get("id"))
+    response_wallet = get_wallet(response_user.json().get("id"))
+    if(response_existing_user.status_code == 200 or response_wallet.status_code == 200):
+        fail_print("Test delete user")
+    else:
+        pass_print("Test delete user")
+
+
+def test_delete_all_users():
+    delete_all_users()
+    user_first = create_user(USER_FIRST.get("name"), USER_FIRST.get("email"))
+    user_second = create_user(USER_SECOND.get("name"), USER_SECOND.get("email"))
+    delete_all_users()
+    response_first_user = get_user(user_first.json().get("id"))
+    response_second_user = get_user(user_second.json().get("id"))
+
+    if(response_first_user.status_code == 404 or response_second_user.status_code == 404):
+        pass_print("Test delete all user")
+    else:
+        fail_print("Test delete all user")
+
 
 ########################################################################################################
     
 def main():
-    test_create_user()
-    test_existing_email()
-    test_missing_name()
-    test_missing_email()
-    check_email_format()
-    test_missing_name_and_email()
-    test_get_user_existing()    
+    try:
+        test_create_user()
+        test_existing_email()
+        test_missing_name()
+        test_missing_email()
+        test_check_email_format()
+        test_missing_name_and_email()
+        test_get_existing_user()
+        test_delete_user()
+        test_delete_all_users()
+    except Exception as e:
+        print("Something went wrong")
+
 
 if __name__ == "__main__":
     main()
