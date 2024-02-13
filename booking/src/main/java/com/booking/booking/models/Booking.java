@@ -33,10 +33,8 @@ public class Booking {
     private Show show;
 
     @Column(name = "user_id")
-    @JsonProperty("user_id")
     private Long userId;
 
     @Column(name = "seats_booked")
-    @JsonProperty("seats_booked")
     private Long seatsBooked;
 }

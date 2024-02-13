@@ -16,12 +16,13 @@ import com.booking.booking.repositories.TheatreRepositories;
 @RestController
 public class TheatreController {
     @Autowired
-    private TheatreRepositories threadRepositories;
+    private TheatreRepositories theatreRepositories;
 
     @GetMapping("/theatres")
     public ResponseEntity<List<TheatreDTO>> getAllTheatres(){
+        // Get All theatre and map to Theatre DTO and return them
         return new ResponseEntity<>(
-            threadRepositories.findAll().stream().map(
+            theatreRepositories.findAll().stream().map(
                 show -> {return TheatreMapper.mapTheatreToTheatreDTO(show);}
             ).collect(Collectors.toList()), HttpStatus.OK);
     }
