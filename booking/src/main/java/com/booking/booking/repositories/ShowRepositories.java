@@ -8,4 +8,5 @@ import com.booking.booking.models.Show;
 
 public interface ShowRepositories extends JpaRepository<Show, Long> {
     List<Show> findAllByTheatreId(Long theatreId);
+    boolean existsByTheatreId(Long theatreId);
 }

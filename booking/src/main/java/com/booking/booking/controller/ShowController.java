@@ -24,12 +24,15 @@ public class ShowController {
             ShowDTO show = showService.getById(showId);   
             return new ResponseEntity<ShowDTO> (show, HttpStatus.OK);
         } catch(Exception e){
-            return new ResponseEntity<HttpStatus>(HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<HttpStatus>(HttpStatus.NOT_FOUND);
         }
     }
 
     @GetMapping("/shows/theatres/{theatre_id}")
     public ResponseEntity<?> getAllShowShowcasedByTheater(@PathVariable("theatre_id") Long theatreId){
+        if(!showService.existsByTheatreId(theatreId))
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+
         try{
             List<ShowDTO> shows = showService.getAllByTheaterId(theatreId);
             return new ResponseEntity<List<ShowDTO>>(shows, HttpStatus.OK);

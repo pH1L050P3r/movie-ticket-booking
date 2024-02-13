@@ -26,4 +26,8 @@ public class ShowService implements IShowService {
             show -> {return ShowMapper.showToShowDTO(show);}
         ).collect(Collectors.toList());
     }
+
+    public boolean existsByTheatreId(Long theatreId){
+        return showRepositories.existsByTheatreId(theatreId);
+    }
 }
