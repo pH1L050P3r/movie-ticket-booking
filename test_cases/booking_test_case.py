@@ -192,7 +192,8 @@ def test_create_booking_valid():
 @test_runner.test
 def test_create_booking_invalid_show():
     show_id = 999  # Assuming show with ID 999 doesn't exist
-    user_id = 1  # Assuming user with ID 1 exists
+    user_response = create_user(USER_FIRST.get("name"), USER_FIRST.get("email"))
+    user_id = user_response.json().get("id")
     seats_booked = 2
     response = create_booking(show_id, user_id, seats_booked)
     if(response.status_code != 400):
@@ -216,7 +217,8 @@ def test_create_booking_invalid_user():
 @test_runner.test
 def test_create_booking_insufficient_seats():
     show_id = 1  # Assuming show with ID 1 exists
-    user_id = 1  # Assuming user with ID 1 exists
+    user_response = create_user(USER_FIRST.get("name"), USER_FIRST.get("email"))
+    user_id = user_response.json().get("id")
     seats_booked = 999  # Assuming there are not enough available seats
     response = create_booking(show_id, user_id, seats_booked)
     if(response.status_code != 400):
