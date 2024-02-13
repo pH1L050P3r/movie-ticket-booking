@@ -13,7 +13,7 @@ walletServiceURL = "http://localhost:8082"
 # ANSI escape codes for colors
 RED = '\033[91m'
 RESET = '\033[0m'
-GREEN = '\033[92m'
+GREEN = '\u001b[32m'
 
 USER_FIRST = {
     "name" : "user1",
@@ -24,6 +24,9 @@ USER_SECOND = {
     "name" : "user2",
     "email" : "user2@example.com"
 }
+
+fail_print = lambda message : print(f"{message} : " + RED + "FAIL" + RESET)
+pass_print = lambda message : print(f"{message} : " + GREEN + "PASS" + RESET)
 
 class TestCaseRunner():
     def __init__(self):
@@ -54,6 +57,10 @@ test_runner = TestCaseRunner()
 #Create User
 def create_user(name, email):
     return requests.post(userServiceURL + "/users", json={"name": name, "email": email})
+
+
+def put_wallet(walletId, amount, action):
+    return requests.put(walletServiceURL + "/wallets/" + str(walletId), json={"amount" : amount, "action" : action})
 
 
 
@@ -95,18 +102,18 @@ def delete_all_bookings():
 def test_create_user():
     response_valid = create_user(USER_FIRST.get("name"), USER_FIRST.get("email"))
     if(response_valid.status_code != 201):
-        print("Test Create User "  + RED + " FAIL" + RESET)
+        fail_print("Test Create User")
     else:
-        print("Test Create User"  + GREEN + " PASS" + RESET)
+        pass_print("Test Create User")
 
 #Test to get list of all theatres (can be empty list)
 @test_runner.test
 def test_get_all_theatres():
     response = get_all_theatres()
     if(response.status_code != 200):
-        print("Getting List of all theatres" + RED + " FAIL" + RESET)
+        fail_print("Getting List of all theatres")
     else:
-        print("Get all theatres  "  + GREEN + " PASS" + RESET)
+        pass_print("Get all theatres")
 
 #Test to get all shows of an  existing theatre   
 @test_runner.test
@@ -114,9 +121,9 @@ def test_get_all_shows_for_theatre_existing():
     theatre_id = 1  # Assuming theatre with ID 1 exists
     response = get_all_shows_for_theatre(theatre_id)
     if(response.status_code != 200):
-        print("Failed to get shows for existing theatre" + RED + " FAIL" + RESET)
+        fail_print("Failed to get shows for existing theatre")
     else:
-        print("Get shows for existing theatre "  + GREEN + "  PASS" + RESET)
+        pass_print("Get shows for existing theatre")
 
 #Test to get all shows of a non existing theatre
 @test_runner.test
@@ -124,9 +131,9 @@ def test_get_all_shows_for_theatre_non_existing():
     theatre_id = 999  # Assuming theatre with ID 999 doesn't exist
     response = get_all_shows_for_theatre(theatre_id)
     if(response.status_code != 404):
-        print("Getting shows for non-existing theatre should return 404" + RED + " FAIL" + RESET)
+        fail_print("Getting shows for non-existing theatre should return 404")
     else:
-        print("Get shows for non-existing theatre " + GREEN + "  PASS" + RESET)
+        pass_print("Get shows for non-existing theatre")
 
 #Test for getting existing show if show exists
 @test_runner.test
@@ -134,9 +141,9 @@ def test_get_show_existing():
     show_id = 1  # Assuming show with ID 1 exists
     response = get_show(show_id)
     if(response.status_code != 200):
-        print("Failed to get existing show" + RED + " FAIL" + RESET)
+        fail_print("Failed to get existing show")
     else:
-        print("Get existing show "  + GREEN + "  PASS" + RESET)
+        pass_print("Get existing show")
 
 #Test for getting existing show if show doesn't exists
 @test_runner.test
@@ -144,18 +151,18 @@ def test_get_show_non_existing():
     show_id = 999  # Assuming show with ID 999 doesn't exist
     response = get_show(show_id)
     if(response.status_code != 404):
-        print("Getting non-existing show should return 404" + RED + " FAIL" + RESET)
+        fail_print("Getting non-existing show should return 404")
     else:
-         print("Get non-existing show "  + GREEN + "  PASS" + RESET)
+         pass_print("Get non-existing show")
 
 #Test to get booking of existing user
 def test_get_user_bookings_existing():
     user_id = 1  # Assuming user with ID 1 exists
     response = get_user_bookings(user_id)
     if(response.status_code != 200):
-        print("Failed to get existing user's bookings" + RED + " FAIL" + RESET)
+        fail_print("Failed to get existing user's bookings")
     else:
-        print("Get existing user's bookings "  + GREEN + "  PASS" + RESET)
+        pass_print("Get existing user's bookings ")
 
 #Test to get booking of non existing user
 @test_runner.test
@@ -170,8 +177,10 @@ def test_get_user_bookings_non_existing():
 #Test to book for seats that are sufficiently available
 @test_runner.test
 def test_create_booking_valid():
+    user_response = create_user(USER_FIRST.get("name"), USER_FIRST.get("email"))
+    update_wallet = put_wallet(user_response.json().get("id"), 50000, "credit")
     show_id = 1  # Assuming show with ID 1 exists
-    user_id = 1  # Assuming user with ID 1 exists
+    user_id = user_response.json().get("id")
     seats_booked = 2  # Assuming there are enough available seats
     response = create_booking(show_id, user_id, seats_booked)
     if(response.status_code != 200):
@@ -187,9 +196,9 @@ def test_create_booking_invalid_show():
     seats_booked = 2
     response = create_booking(show_id, user_id, seats_booked)
     if(response.status_code != 400):
-        print("Creating Booking with invalid show should return 400" + RED + " FAIL" + RESET)
+        fail_print("Creating Booking with invalid show should return 400")
     else:
-        print("Create booking with invalid show " + GREEN + "  PASS" + RESET)
+        pass_print("Create booking with invalid show ")
 
 #Test for booking Show for user that doesn't exist
 @test_runner.test
@@ -199,9 +208,9 @@ def test_create_booking_invalid_user():
     seats_booked = 2
     response = create_booking(show_id, user_id, seats_booked)
     if(response.status_code != 400):
-        print("Creating booking with invalid user should return 400" + RED + " FAIL" + RESET)
+        fail_print("Creating booking with invalid user should return 400")
     else:
-        print("Create booking with invalid user " + GREEN + "  PASS" + RESET)
+        pass_print("Create booking with invalid user")
 
 #Test for booking seats that are insufficient
 @test_runner.test
@@ -211,19 +220,24 @@ def test_create_booking_insufficient_seats():
     seats_booked = 999  # Assuming there are not enough available seats
     response = create_booking(show_id, user_id, seats_booked)
     if(response.status_code != 400):
-        print("Creating booking with insufficient seats should return 400" + RED + " FAIL" + RESET)
+        fail_print("Creating booking with insufficient seats should return 400")
     else:
-        print("Create booking with insufficient seats " + GREEN + "  PASS" + RESET)
+        pass_print("Create booking with insufficient seats")
 
 #Test to delete existing user's bookings
 @test_runner.test
 def test_delete_user_bookings_existing():
-    user_id = 1  # Assuming user with ID 1 exists
+    user_response = create_user(USER_FIRST.get("name"), USER_FIRST.get("email"))
+    update_wallet = put_wallet(user_response.json().get("id"), 50000, "credit")
+    show_id = 1  # Assuming show with ID 1 exists
+    user_id = user_response.json().get("id")
+    seats_booked = 2  # Assuming there are enough available seats
+    response = create_booking(show_id, user_id, seats_booked)
     response = delete_user_bookings(user_id)
     if(response.status_code != 200):
-        print("Failed to delete existing user's bookings" + RED + " FAIL" + RESET)
+        fail_print("Failed to delete existing user's bookings")
     else:
-        print("Delete existing user's bookings " + GREEN + "  PASS" + RESET)
+        pass_print("Delete existing user's bookings")
 
 #Test for deleting bookings for user that doesn't exist
 @test_runner.test
@@ -231,20 +245,24 @@ def test_delete_user_bookings_non_existing():
     user_id = 999  # Assuming user with ID 999 doesn't exist
     response = delete_user_bookings(user_id)
     if(response.status_code != 404):
-        print("Deleting non-existing user's bookings should return 404" + RED + " FAIL" + RESET)
+        fail_print("Deleting non-existing user's bookings should return 404")
     else:
-        print("Delete non-existing user's bookings "+ GREEN + "  PASS" + RESET)
+        pass_print("Delete non-existing user's bookings")
 
 #Test for deleting shows for existing user
 @test_runner.test
 def test_delete_user_show_bookings_existing():
-    user_id = 1  # Assuming user with ID 1 exists
+    user_response = create_user(USER_FIRST.get("name"), USER_FIRST.get("email"))
+    update_wallet = put_wallet(user_response.json().get("id"), 50000, "credit")
     show_id = 1  # Assuming show with ID 1 exists
+    user_id = user_response.json().get("id")
+    seats_booked = 2  # Assuming there are enough available seats
+    response = create_booking(show_id, user_id, seats_booked)
     response = delete_user_show_bookings(user_id, show_id)
     if(response.status_code != 200):
-        print("Failed to delete existing user's bookings for show" + RED + " FAIL" + RESET)
+        fail_print("Failed to delete existing user's bookings for show")
     else:
-        print("Delete existing user's bookings for show " + GREEN + "  PASS" + RESET)
+        pass_print("Delete existing user's bookings for show")
 
 #Test for deleting booking for non existing user
 @test_runner.test
@@ -253,18 +271,18 @@ def test_delete_user_show_bookings_non_existing():
     show_id = 999  # Assuming show with ID 999 doesn't exist
     response = delete_user_show_bookings(user_id, show_id)
     if(response.status_code != 404):
-        print("Deleting non-existing user's bookings for non-existing show should return 404" + RED + " FAIL" + RESET)
+        fail_print("Deleting non-existing user's bookings for non-existing show should return 404")
     else:
-        print("Delete non-existing user's bookings for non-existing show "+ GREEN + "  PASS" + RESET)
+        pass_print("Delete non-existing user's bookings for non-existing show")
 
 #Test for deleting all bookings
 @test_runner.test
 def test_delete_all_bookings():
     response = delete_all_bookings()
     if(response.status_code != 200):
-        print("Failed to delete all bookings" + RED + " FAIL" + RESET)
+        fail_print("Failed to delete all bookings")
     else:
-        print("Delete all bookings " + GREEN + "  PASS" + RESET)
+        pass_print("Delete all bookings")
 
 
 if __name__ == "__main__":
