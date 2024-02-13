@@ -1,0 +1,39 @@
+version: '3'
+
+services:
+  user-service:
+    build:
+      context: ./user
+    image: user-service
+    networks:
+      - service-network
+    ports:
+      - "8080:8080" 
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  booking-service:
+    build:
+      context: ./booking
+    image: booking-service
+    networks:
+      - service-network
+    ports:
+      - "8081:8080" 
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  wallet-service:
+    build:
+      context: ./wallet
+    image: wallet-service
+    networks:
+      - service-network
+    ports:
+      - "8082:8080" 
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+networks:
+  service-network:
+    driver: bridge
