@@ -33,7 +33,7 @@ public class BookingController {
     public ResponseEntity<?> createUserBooking(@Valid @RequestBody BookingCreateRequestDTO bookingRequest){
         try{
             bookingService.create(bookingRequest);
-            return new ResponseEntity<HttpStatus>(HttpStatus.CREATED);
+            return new ResponseEntity<HttpStatus>(HttpStatus.OK);
         } catch(Exception e){
             return new ResponseEntity<HttpStatus>(HttpStatus.BAD_REQUEST);
         }
