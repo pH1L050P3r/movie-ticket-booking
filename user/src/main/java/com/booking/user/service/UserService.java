@@ -59,7 +59,11 @@ public class UserService {
 
 	public void deleteAllUsers() {
 		// while deleting user delete all associated entities i.e. user bookings, user wallet
-		bookingClientService.deleteAllBookings();
+		try{
+			bookingClientService.deleteAllBookings();
+		} catch (Exception e){
+			// make exception silent
+		}
 		walletClientService.deleteAllWallets();
 		userRepository.deleteAllInBatch();
 	}
