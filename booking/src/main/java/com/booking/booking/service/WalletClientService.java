@@ -24,6 +24,7 @@ public class WalletClientService implements IWalletClientService {
     }
 
     private String put(@NonNull String uri, @NonNull Map<String, String> body){
+        // function to send http put request with the given body to the uri
         return (
             webClient.put()
             .uri(uri)
@@ -39,6 +40,7 @@ public class WalletClientService implements IWalletClientService {
     @Override
     public String updateByUserId(Long amount, Long walletId, Action action) {
         String uri = "/wallets/" + Long.toString(walletId);
+        // creating body for sending in put request body
         Map<String, String> data = new HashMap<String, String>();
         data.put("action", action.toString());
         data.put("amount", Long.toString(amount));

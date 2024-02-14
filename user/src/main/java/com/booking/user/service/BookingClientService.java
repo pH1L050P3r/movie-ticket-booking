@@ -19,6 +19,7 @@ public class BookingClientService implements IBookingClientService{
     }
 
     private String delete(@NonNull String uri){
+        // function to send http delete request to the uri
         return (
             webClient.delete()
             .uri(uri)

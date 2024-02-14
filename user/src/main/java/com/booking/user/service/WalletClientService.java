@@ -24,6 +24,7 @@ public class WalletClientService implements IWalletClientService {
     }
 
     private String put(@NonNull String uri, @NonNull Map<String, String> body){
+        // function to send http put request with the given body to the uri
         return (
             webClient.put()
             .uri(uri)
@@ -37,6 +38,7 @@ public class WalletClientService implements IWalletClientService {
     }
 
     private String delete(@NonNull String uri){
+        // function to send http delete request to uri
         return (
             webClient.delete()
             .uri(uri)

@@ -18,6 +18,7 @@ public class UserClientService implements IUserClientService {
     }
 
     private String get(@NonNull String uri){
+        // function to send get request to the given uri
         return (
             webClient.get()
             .uri(uri)

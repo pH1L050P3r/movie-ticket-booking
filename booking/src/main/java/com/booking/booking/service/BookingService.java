@@ -104,17 +104,21 @@ public class BookingService implements IBookingService {
         Map<Long, Show> Shows = new HashMap<>();
         Map<Long, Long> userAmountRefund = new HashMap<>();
 
+        // creating show list which going to be affected after deleting booking i.e (adding seats back to show)
+        // creating user list which going to be affected after deleting booking i.e (adding amount back to the wallet : Refund)
         for(Booking booking : bookings){
             Shows.put(booking.getShow().getId(), booking.getShow());
             userAmountRefund.put(booking.getUserId(), 0L);
         }
 
+        // Adding booked seats back to the show
+        // Adding booking amount back to the connected user in userAmountRefund
         for(Booking booking : bookings){
             Show show = Shows.get(booking.getShow().getId());
             show.setSeatsAvailable(show.getSeatsAvailable() + booking.getSeatsBooked());
             userAmountRefund.put(booking.getUserId(), userAmountRefund.get(booking.getUserId()) + show.getPrice()*booking.getSeatsBooked());
         }
-        //API request to Add money back into Wallet for all users
+        //API request to Add money back into Wallet for all users : user and refundable amount stored in userAmountRefund in key, value pair
         for(Long userId : userAmountRefund.keySet()){
             walletClientService.updateByUserId(userAmountRefund.get(userId), userId, Action.credit);
         }

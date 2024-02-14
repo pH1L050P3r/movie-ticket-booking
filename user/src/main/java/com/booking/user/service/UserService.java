@@ -24,6 +24,7 @@ public class UserService {
 	public UserDTO createUser(String userName, String email) {
 		User user = new User(userName, email);
 		user = userRepository.save(user);
+		// creating user associated wallet at the time of user creation
 		walletClientService.updateUserWalletMoney(user.getId(), 0L, Action.credit);
 		return UserMapper.mapUserToUserDTO(user);
 	}
@@ -57,6 +58,7 @@ public class UserService {
 	}
 
 	public void deleteAllUsers() {
+		// while deleting user delete all associated entities i.e. user bookings, user wallet
 		bookingClientService.deleteAllBookings();
 		walletClientService.deleteAllWallets();
 		userRepository.deleteAllInBatch();
