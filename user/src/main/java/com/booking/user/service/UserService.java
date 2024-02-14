@@ -25,7 +25,7 @@ public class UserService {
 		User user = new User(userName, email);
 		user = userRepository.save(user);
 		// creating user associated wallet at the time of user creation
-		walletClientService.updateUserWalletMoney(user.getId(), 0L, Action.credit);
+		// walletClientService.updateUserWalletMoney(user.getId(), 0L, Action.credit);
 		return UserMapper.mapUserToUserDTO(user);
 	}
 	
@@ -39,7 +39,12 @@ public class UserService {
 			//Booking microservice returns 404 if no booking found for user else delete's all booking
 			//so BookingClientService throws BookingNotFoundException if micro services returns 404 
 		}
-		walletClientService.deleteWalletById(userId);
+		try{
+			walletClientService.deleteWalletById(userId);
+		} catch(Exception e){
+			// wallet does not exist
+			//pass
+		}
 		userRepository.deleteById(userId);
 		return true;
     }

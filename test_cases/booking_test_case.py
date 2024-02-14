@@ -282,7 +282,7 @@ def test_delete_user_show_bookings_non_existing():
 def test_delete_all_bookings():
     response = delete_all_bookings()
     if(response.status_code != 200):
-        fail_print("Failed to delete all bookings")
+        fail_print("Delete all bookings")
     else:
         pass_print("Delete all bookings")
 

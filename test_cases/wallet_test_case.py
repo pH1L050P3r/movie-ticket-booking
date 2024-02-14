@@ -89,6 +89,7 @@ def delete_all_wallets():
 @test_runner.test
 def test_wallet_created_while_user_created():
     response_user = create_user(USER_FIRST.get("name"), USER_FIRST.get("email"))
+    response_wallet = put_wallet(response_user.json().get("id"), 0, "credit")
     response_wallet = get_wallet(response_user.json().get("id"))
 
     if response_wallet.status_code != 200:
@@ -149,6 +150,7 @@ def test_wallet_update_debit_from_insufficient_balance():
 @test_runner.test
 def test_wallet_delete():
     response_user = create_user(USER_FIRST.get("name"), USER_FIRST.get("email"))
+    response_wallet = put_wallet(response_user.json().get("id"), 0, "credit")
     response_delete = delete_wallet(response_user.json().get("id"))
     response_get_delete = get_wallet(response_user.json().get("id"))
 

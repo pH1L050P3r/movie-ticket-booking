@@ -65,7 +65,7 @@ public class BookingController {
             bookingService.deleteAll();;
             return new ResponseEntity<HttpStatus>(HttpStatus.OK);
         } catch(Exception e){
-            return new ResponseEntity<HttpStatus>(HttpStatus.NOT_FOUND);
+            return new ResponseEntity<HttpStatus>(HttpStatus.OK);
         }
     }
 }
