@@ -34,6 +34,18 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
+  h2-db-service:
+    build:
+      context: ./h2-db-service
+    image: h2-db-service
+    networks:
+      - service-network
+    ports:
+      - "9082:9082"
+      - "9081:9081" 
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
 networks:
   service-network:
     driver: bridge
