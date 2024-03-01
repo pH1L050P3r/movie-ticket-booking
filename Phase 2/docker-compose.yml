@@ -11,6 +11,9 @@ services:
       - "8080:8080" 
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    depends_on:
+      - h2-db-service
+
 
   booking-service:
     build:
@@ -22,6 +25,9 @@ services:
       - "8081:8080" 
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    depends_on:
+      - h2-db-service
+
 
   wallet-service:
     build:
@@ -33,6 +39,9 @@ services:
       - "8082:8080" 
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    depends_on:
+      - h2-db-service
+
 
   h2-db-service:
     build:
