@@ -4,13 +4,16 @@ package com.booking.wallet.services;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.core.env.Environment;
+import jakarta.annotation.Resource;
 
 
 import org.springframework.lang.NonNull;
 
 @Service
 public class UserClientService implements IUserClientService {
-    private @NonNull String baseUrl = "http://host.docker.internal:8080/users";
+    
+    private @NonNull String baseUrl = "http://" + System.getProperty("USER_SERVICE_HOST") + ":" + System.getProperty("USER_SERVICE_PORT") + "/users";
     private final WebClient webClient;
 
     public UserClientService() {

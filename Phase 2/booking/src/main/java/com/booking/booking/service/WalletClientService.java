@@ -12,29 +12,27 @@ import com.booking.booking.enums.Action;
 
 import org.springframework.lang.NonNull;
 
-
-
 @Service
 public class WalletClientService implements IWalletClientService {
-    private @NonNull String baseUrl = "http://host.docker.internal:8082";
+
+    private @NonNull String baseUrl = "http://" + System.getProperty("WALLET_SERVICE_HOST") + ":"
+            + System.getProperty("WALLET_SERVICE_PORT");
     private final WebClient webClient;
 
     public WalletClientService() {
         this.webClient = WebClient.builder().baseUrl(baseUrl).build();
     }
 
-    private String put(@NonNull String uri, @NonNull Map<String, String> body){
+    private String put(@NonNull String uri, @NonNull Map<String, String> body) {
         // function to send http put request with the given body to the uri
-        return (
-            webClient.put()
-            .uri(uri)
-            .contentType(MediaType.APPLICATION_JSON)
-            .accept(MediaType.APPLICATION_JSON)
-            .body(BodyInserters.fromValue(body))
-            .retrieve()
-            .bodyToMono(String.class)
-            .block()
-        );
+        return (webClient.put()
+                .uri(uri)
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON)
+                .body(BodyInserters.fromValue(body))
+                .retrieve()
+                .bodyToMono(String.class)
+                .block());
     }
 
     @Override

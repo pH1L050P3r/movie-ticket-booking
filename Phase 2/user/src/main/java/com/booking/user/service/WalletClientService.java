@@ -3,6 +3,8 @@ package com.booking.user.service;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.BodyInserters;
@@ -12,41 +14,36 @@ import com.booking.user.enums.Action;
 
 import org.springframework.lang.NonNull;
 
-
-
 @Service
 public class WalletClientService implements IWalletClientService {
-    private @NonNull String baseUrl = "http://host.docker.internal:8082";
+    private @NonNull String baseUrl;
     private final WebClient webClient;
 
     public WalletClientService() {
+        this.baseUrl = "http://" + System.getenv("WALLET_SERVICE_HOST") + ":" + System.getenv("WALLET_SERVICE_PORT");
         this.webClient = WebClient.builder().baseUrl(baseUrl).build();
     }
 
-    private String put(@NonNull String uri, @NonNull Map<String, String> body){
+    private String put(@NonNull String uri, @NonNull Map<String, String> body) {
         // function to send http put request with the given body to the uri
-        return (
-            webClient.put()
-            .uri(uri)
-            .contentType(MediaType.APPLICATION_JSON)
-            .accept(MediaType.APPLICATION_JSON)
-            .body(BodyInserters.fromValue(body))
-            .retrieve()
-            .bodyToMono(String.class)
-            .block()
-        );
+        return (webClient.put()
+                .uri(uri)
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON)
+                .body(BodyInserters.fromValue(body))
+                .retrieve()
+                .bodyToMono(String.class)
+                .block());
     }
 
-    private String delete(@NonNull String uri){
+    private String delete(@NonNull String uri) {
         // function to send http delete request to uri
-        return (
-            webClient.delete()
-            .uri(uri)
-            .accept(MediaType.APPLICATION_JSON)
-            .retrieve()
-            .bodyToMono(String.class)
-            .block()
-        );
+        return (webClient.delete()
+                .uri(uri)
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .bodyToMono(String.class)
+                .block());
     }
 
     @Override
@@ -59,13 +56,13 @@ public class WalletClientService implements IWalletClientService {
     }
 
     @Override
-    public String deleteWalletById(Long walletId){
+    public String deleteWalletById(Long walletId) {
         String uri = "/wallets/" + Long.toString(walletId);
         return this.delete(uri);
     }
 
     @Override
-    public String deleteAllWallets(){
+    public String deleteAllWallets() {
         String uri = "/wallets";
         return this.delete(uri);
     }
