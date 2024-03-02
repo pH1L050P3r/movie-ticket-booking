@@ -8,6 +8,8 @@ import java.util.NoSuchElementException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.booking.booking.dto.BookingCreateRequestDTO;
 import com.booking.booking.dto.BookingResponseDTO;
@@ -19,7 +21,9 @@ import com.booking.booking.models.Show;
 import com.booking.booking.repositories.BookingRepositories;
 import com.booking.booking.repositories.ShowRepositories;
 
+
 @Service
+@Transactional(isolation = Isolation.SERIALIZABLE)
 public class BookingService implements IBookingService {
 
     @Autowired
@@ -31,6 +35,7 @@ public class BookingService implements IBookingService {
     @Autowired
     private IUserClientService userClientService;
 
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public BookingResponseDTO create(BookingCreateRequestDTO bookingRequestData) throws BookingServiceException{
         Booking booking = new Booking();
         Show show;
@@ -77,16 +82,19 @@ public class BookingService implements IBookingService {
         return bookings;
     }
 
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public void deleteByUserId(Long userId) throws BookingServiceException{
         List<Booking> bookings = bookingRepositories.findAllByUserId(userId);
         this.deleteBookingHelper(bookings);
     }
 
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public void deleteByUserIdAndShowId(Long userId, Long showId) throws BookingServiceException{
         List<Booking> bookings = bookingRepositories.findAllByUserIdAndShowId(userId, showId);
         this.deleteBookingHelper(bookings);
     }
 
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public void deleteAll() throws BookingServiceException{
         try{
             List<Booking> booking = bookingRepositories.findAll();

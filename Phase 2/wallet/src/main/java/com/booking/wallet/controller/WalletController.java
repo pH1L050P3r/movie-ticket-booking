@@ -33,7 +33,6 @@ public class WalletController {
         }
     }
 
-    @Transactional
     @PutMapping("/wallets/{id}")
     public ResponseEntity<?> updateWallet(@Valid @RequestBody UpdateWalletBody requestBody, @PathVariable("id") @NonNull Long walletId){
         try{

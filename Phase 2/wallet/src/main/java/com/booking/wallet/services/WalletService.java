@@ -11,10 +11,13 @@ import com.booking.wallet.mapper.WallerMapper;
 import com.booking.wallet.models.Wallet;
 import com.booking.wallet.repositories.WalletRepository;
 
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.NonNull;
 
 
 @Service
+@Transactional(isolation = Isolation.SERIALIZABLE)
 public class WalletService implements IWalletService {
     @Autowired
     private WalletRepository walletRepository;
@@ -22,12 +25,14 @@ public class WalletService implements IWalletService {
     private IUserClientService userClientService;
 
     @Override
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public WalletDTO getWalletById(@NonNull Long walletId){
         Wallet wallet =  walletRepository.findById(walletId).get();
         return WallerMapper.WalletToWalletDTO(wallet);
     }
 
     @Override
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public WalletDTO updateWallet(@NonNull Long walletId, Long amount, Action action) throws Exception {
         Wallet wallet;
 
@@ -58,6 +63,7 @@ public class WalletService implements IWalletService {
     }
 
     @Override
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public void deleteWalletById(@NonNull Long walletId) throws Exception{
         if(!walletRepository.existsById(walletId))
             throw new Exception("User does not exists");
@@ -65,6 +71,7 @@ public class WalletService implements IWalletService {
     }
 
     @Override
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public void deleteAllWallets(){
         walletRepository.deleteAll();
     }
