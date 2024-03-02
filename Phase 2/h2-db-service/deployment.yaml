@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: h2db
+spec:
+  selector:
+    matchLabels:
+      app: h2db
+  template:
+    metadata:
+      labels:
+        app: h2db
+    spec:
+      containers:
+      - name: h2db
+        image: h2db:v0
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 9081
