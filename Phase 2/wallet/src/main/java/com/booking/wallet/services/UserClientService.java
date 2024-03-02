@@ -13,7 +13,8 @@ import org.springframework.lang.NonNull;
 @Service
 public class UserClientService implements IUserClientService {
     
-    private @NonNull String baseUrl = "http://" + System.getenv("USER_SERVICE_HOST") + ":" + System.getenv("USER_SERVICE_PORT") + "/users";
+    // private @NonNull String baseUrl = "http://" + System.getenv("USER_SERVICE_HOST") + ":" + System.getenv("USER_SERVICE_PORT") + "/users";
+    private @NonNull String baseUrl = "http://user-service:8080/users";
     private final WebClient webClient;
 
     public UserClientService() {

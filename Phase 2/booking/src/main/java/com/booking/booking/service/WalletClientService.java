@@ -15,8 +15,9 @@ import org.springframework.lang.NonNull;
 @Service
 public class WalletClientService implements IWalletClientService {
 
-    private @NonNull String baseUrl = "http://" + System.getenv("WALLET_SERVICE_HOST") + ":"
-            + System.getenv("WALLET_SERVICE_PORT");
+    // private @NonNull String baseUrl = "http://" + System.getenv("WALLET_SERVICE_HOST") + ":"
+    //         + System.getenv("WALLET_SERVICE_PORT");
+    private @NonNull String baseUrl = "http://wallet-service:8082";
     private final WebClient webClient;
 
     public WalletClientService() {

@@ -3,8 +3,6 @@ package com.booking.user.service;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.env.Environment;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.BodyInserters;
@@ -20,7 +18,8 @@ public class WalletClientService implements IWalletClientService {
     private final WebClient webClient;
 
     public WalletClientService() {
-        this.baseUrl = "http://" + System.getenv("WALLET_SERVICE_HOST") + ":" + System.getenv("WALLET_SERVICE_PORT");
+        // this.baseUrl = "http://" + System.getenv("WALLET_SERVICE_HOST") + ":" + System.getenv("WALLET_SERVICE_PORT");
+        this.baseUrl = "http://wallet-service:8082";
         this.webClient = WebClient.builder().baseUrl(baseUrl).build();
     }
 
