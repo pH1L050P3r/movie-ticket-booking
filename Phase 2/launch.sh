@@ -9,7 +9,7 @@ eval $(minikube docker-env)
 # Build images for all four services
 # docker compose up
 docker build -t user-service:v0 user
-docker build -t h2db:v0 h2-db-service
+docker build -t h2db-service:v0 h2-db-service
 docker build -t wallet-service:v0 wallet
 docker build -t booking-service:v0 booking
 

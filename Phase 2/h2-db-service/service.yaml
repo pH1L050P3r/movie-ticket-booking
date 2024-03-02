@@ -4,7 +4,7 @@ metadata:
   name: h2db-service
 spec:
   selector:
-    app: h2db
+    app: h2db-service
   ports:
   - protocol: TCP
     name: http
