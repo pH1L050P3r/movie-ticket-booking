@@ -1,9 +1,9 @@
 import requests
 import sys
 
-userServiceURL = "http://localhost:8081"
-bookingServiceURL = "http://localhost:8082"
-walletServiceURL = "http://localhost:8083"
+userServiceURL = "http://localhost:8080"
+bookingServiceURL = "http://localhost:8081"
+walletServiceURL = "http://localhost:8082"
 
 
 # userServiceURL = "http://10.217.54.237:8080"
@@ -31,9 +31,9 @@ pass_print = lambda message : print(f"{message} : " + GREEN + "PASS" + RESET)
 class TestCaseRunner():
     def __init__(self):
         self.test_cases = []
-        self.userServiceURL = "http://localhost:8081"
-        self.bookingServiceURL = "http://localhost:8082"
-        self.walletServiceURL = "http://localhost:8083"
+        userServiceURL = "http://localhost:8080"
+        bookingServiceURL = "http://localhost:8081"
+        walletServiceURL = "http://localhost:8082"
 
     
     def run(self):
