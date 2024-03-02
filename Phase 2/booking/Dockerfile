@@ -8,4 +8,5 @@ ENV BOOKING_SERVICE_PORT="8082"
 ENV USER_SERVICE_HOST="host.docker.internal"
 ENV USER_SERVICE_PORT="8081"
 RUN ./mvnw package -Ptest
+EXPOSE 8080
 CMD ["sh", "-c", "java -jar ./target/*.jar --spring.profiles.active=production --debug"]

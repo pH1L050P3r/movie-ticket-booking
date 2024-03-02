@@ -14,11 +14,13 @@ docker build -t wallet-service:v0 wallet
 docker build -t booking-service:v0 booking
 
 
-# Launch deployments and services for all four services
+# Launch deployments for all four services
 kubectl apply -f user/deployment.yaml
 kubectl apply -f wallet/deployment.yaml
 kubectl apply -f booking/deployment.yaml
 kubectl apply -f h2-db-service/deployment.yaml
+
+# Launch services/load-balancer
 kubectl apply -f user/service.yaml
 kubectl apply -f wallet/service.yaml
 kubectl apply -f booking/service.yaml

@@ -4,7 +4,13 @@ metadata:
   name: h2db
 spec:
   selector:
-    app: myapp
+    app: h2db
   ports:
-  - port: 9081
+  - protocol: TCP
+    name: http
+    port: 9081
     targetPort: 9081
+  - protocol: TCP
+    name: tcp
+    port: 9082
+    targetPort: 9082
