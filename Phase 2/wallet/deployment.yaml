@@ -16,7 +16,7 @@ spec:
         image: wallet-service:v0
         resources:
           limits:
-            memory: "1024Mi"
+            memory: "512Mi"
             cpu: "500m"
         ports:
         - containerPort: 8080

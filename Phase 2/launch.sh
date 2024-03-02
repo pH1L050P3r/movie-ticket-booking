@@ -26,7 +26,9 @@ kubectl apply -f wallet/service.yaml
 kubectl apply -f booking/service.yaml
 kubectl apply -f h2-db-service/service.yaml
 
-minikube tunnel
+kubectl port-forward service/user-service 8080:8080 &
+kubectl port-forward service/booking-service 8081:8081 &
+kubectl port-forward service/wallet-service 8082:8082 &
 
 
 # Expose main three services at ports 8080, 8081, and 8082
