@@ -32,4 +32,5 @@ kubectl port-forward service/user-service 8080:8080 &
 kubectl port-forward service/booking-service 8081:8081 &
 kubectl port-forward service/wallet-service 8082:8082 &
 
+sleep 30
 echo "Cluster Ready to run..."
