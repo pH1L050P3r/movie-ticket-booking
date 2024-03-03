@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: booking-service
+  name: tarun-booking-service
 spec:
   selector:
     matchLabels:
-      app: booking-service
+      app: tarun-booking-service
   template:
     metadata:
       labels:
-        app: booking-service
+        app: tarun-booking-service
     spec:
       containers:
-      - name: booking-service
-        image: booking-service:v0
+      - name: tarun-booking-service
+        image: tarun-booking-service:v0
         ports:
         - containerPort: 8080
         resources:

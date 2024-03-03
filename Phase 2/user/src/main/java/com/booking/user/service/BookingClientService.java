@@ -19,7 +19,7 @@ public class BookingClientService implements IBookingClientService {
     public BookingClientService() {
         // this.baseUrl = "http://" + System.getenv("BOOKING_SERVICE_HOST") + ":" + System.getenv("BOOKING_SERVICE_PORT")
                 // + "/bookings";
-        this.baseUrl = "http://booking-service:8081/bookings";
+        this.baseUrl = "http://tarun-booking-service:8081/bookings";
         this.webClient = WebClient.builder().baseUrl(baseUrl).build();
     }
 

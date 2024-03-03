@@ -19,7 +19,7 @@ public class WalletClientService implements IWalletClientService {
 
     public WalletClientService() {
         // this.baseUrl = "http://" + System.getenv("WALLET_SERVICE_HOST") + ":" + System.getenv("WALLET_SERVICE_PORT");
-        this.baseUrl = "http://wallet-service:8082";
+        this.baseUrl = "http://tarun-wallet-service:8082";
         this.webClient = WebClient.builder().baseUrl(baseUrl).build();
     }
 

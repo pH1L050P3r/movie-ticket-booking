@@ -7,10 +7,10 @@ eval $(minikube docker-env)
 
 # Build images for all four services
 # docker compose up
-docker build -t user-service:v0 user
-docker build -t h2db-service:v0 h2-db-service
-docker build -t wallet-service:v0 wallet
-docker build -t booking-service:v0 booking
+docker build -t tarun-user-service:v0 user
+docker build -t tarun-h2db-service:v0 h2-db-service
+docker build -t tarun-wallet-service:v0 wallet
+docker build -t tarun-booking-service:v0 booking
 
 
 # Launch deployments for all four services
@@ -33,9 +33,9 @@ pkill -f "kubectl port-forward"
 
 echo "Wait for 30 seconds"
 sleep 30
-kubectl port-forward service/user-service 8080:8080 &
-kubectl port-forward service/booking-service 8081:8081 &
-kubectl port-forward service/wallet-service 8082:8082 &
+kubectl port-forward service/tarun-user-service 8080:8080 &
+kubectl port-forward service/tarun-booking-service 8081:8081 &
+kubectl port-forward service/tarun-wallet-service 8082:8082 &
 
 sleep 30
 echo "Cluster Ready to run..."

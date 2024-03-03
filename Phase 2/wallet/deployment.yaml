@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: wallet-service
+  name: tarun-wallet-service
 spec:
   selector:
     matchLabels:
-      app: wallet-service
+      app: tarun-wallet-service
   template:
     metadata:
       labels:
-        app: wallet-service
+        app: tarun-wallet-service
     spec:
       containers:
-      - name: wallet-service
-        image: wallet-service:v0
+      - name: tarun-wallet-service
+        image: tarun-wallet-service:v0
         resources:
           limits:
             memory: "1024Mi"

@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: user-service
+  name: tarun-user-service
 spec:
   selector:
     matchLabels:
-      app: user-service
+      app: tarun-user-service
   template:
     metadata:
       labels:
-        app: user-service
+        app: tarun-user-service
     spec:
       containers:
-      - name: user-service
-        image: user-service:v0
+      - name: tarun-user-service
+        image: tarun-user-service:v0
         resources:
           limits:
             memory: "1024Mi"

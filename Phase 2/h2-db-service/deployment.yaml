@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: h2db-service
+  name: tarun-h2db-service
 spec:
   selector:
     matchLabels:
-      app: h2db-service
+      app: tarun-h2db-service
   template:
     metadata:
       labels:
-        app: h2db-service
+        app: tarun-h2db-service
     spec:
       containers:
-      - name: h2db-service
-        image: h2db-service:v0
+      - name: tarun-h2db-service
+        image: tarun-h2db-service:v0
         resources:
           limits:
             memory: "128Mi"
