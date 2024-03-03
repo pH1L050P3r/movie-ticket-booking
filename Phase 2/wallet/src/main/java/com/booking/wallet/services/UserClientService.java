@@ -4,8 +4,6 @@ package com.booking.wallet.services;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.core.env.Environment;
-import jakarta.annotation.Resource;
 
 
 import org.springframework.lang.NonNull;

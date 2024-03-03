@@ -15,7 +15,6 @@ import com.booking.wallet.dto.UpdateWalletBody;
 import com.booking.wallet.dto.WalletDTO;
 import com.booking.wallet.services.IWalletService;
 
-import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 
 @RestController
