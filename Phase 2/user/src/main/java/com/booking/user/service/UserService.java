@@ -9,7 +9,11 @@ import com.booking.user.mapper.UserMapper;
 import com.booking.user.models.User;
 import com.booking.user.repository.UserRepository;
 
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
+
 @Service
+@Transactional(isolation = Isolation.SERIALIZABLE)
 public class UserService {
 
 	@Autowired

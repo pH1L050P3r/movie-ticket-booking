@@ -10,12 +10,13 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.lang.NonNull;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.booking.wallet.dto.UpdateWalletBody;
 import com.booking.wallet.dto.WalletDTO;
 import com.booking.wallet.services.IWalletService;
 
-import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 
 @RestController
@@ -33,7 +34,6 @@ public class WalletController {
         }
     }
 
-    @Transactional
     @PutMapping("/wallets/{id}")
     public ResponseEntity<?> updateWallet(@Valid @RequestBody UpdateWalletBody requestBody, @PathVariable("id") @NonNull Long walletId){
         try{

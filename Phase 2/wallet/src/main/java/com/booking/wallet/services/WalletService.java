@@ -17,7 +17,6 @@ import lombok.NonNull;
 
 
 @Service
-@Transactional(isolation = Isolation.SERIALIZABLE)
 public class WalletService implements IWalletService {
     @Autowired
     private WalletRepository walletRepository;
