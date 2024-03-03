@@ -18,8 +18,8 @@ spec:
         - containerPort: 8080
         resources:
           requests:
-            cpu: 500m
-            memory: 512Mi
+            cpu: "500m"
+            memory: "1024Mi"
           limits:
             cpu: 1000m
       terminationGracePeriodSeconds: 30

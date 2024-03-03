@@ -9,4 +9,4 @@ spec:
     name: tarun-booking-service
   minReplicas: 1
   maxReplicas: 3
-  targetCPUUtilizationPercentage: 30
+  targetCPUUtilizationPercentage: 50
