@@ -9,7 +9,7 @@ kubectl delete service tarun-user-service tarun-booking-service tarun-wallet-ser
 kubectl delete deployment tarun-user-service tarun-booking-service tarun-wallet-service tarun-h2db-service
 
 # Deleting Autoscaling
-kubectl delete hpa tarun-booking-service-hpa
+kubectl delete hpa tarun-booking-service
 
 # wait for 60 seconds
 sleep 60
