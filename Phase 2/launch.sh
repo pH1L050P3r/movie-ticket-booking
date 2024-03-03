@@ -2,8 +2,7 @@
 
 # Start minikube
 minikube start
-
-# Set minikube Docker environment variables
+minikube addons enable metrics-server
 eval $(minikube docker-env)
 
 # Build images for all four services
@@ -17,7 +16,10 @@ docker build -t booking-service:v0 booking
 # Launch deployments for all four services
 kubectl apply -f user/deployment.yaml
 kubectl apply -f wallet/deployment.yaml
+
 kubectl apply -f booking/deployment.yaml
+kubectl apply -f booking/autoscale.yaml
+
 kubectl apply -f h2-db-service/deployment.yaml
 
 # Launch services/load-balancer
@@ -25,6 +27,9 @@ kubectl apply -f user/service.yaml
 kubectl apply -f wallet/service.yaml
 kubectl apply -f booking/service.yaml
 kubectl apply -f h2-db-service/service.yaml
+
+
+pkill -f "kubectl port-forward"
 
 echo "Wait for 30 seconds"
 sleep 30
