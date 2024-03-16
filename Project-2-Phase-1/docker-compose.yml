@@ -1,0 +1,42 @@
+version: '3'
+
+services:
+  user-service:
+    build:
+      context: ./user
+    image: user-service
+    networks:
+      - service-network
+    ports:
+      - "8081:8080" 
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - WALLET_SERVICE_HOST=host.docker.internal
+      - WALLET_SERVICE_PORT=8083
+      - BOOKING_SERVICE_HOST=host.docker.internal
+      - BOOKING_SERVICE_PORT=8082
+      - USER_SERVICE_HOST=host.docker.internal
+      - USER_SERVICE_PORT=8081
+
+  wallet-service:
+    build:
+      context: ./wallet
+    image: wallet-service
+    networks:
+      - service-network
+    ports:
+      - "8083:8080"
+    environment:
+      - WALLET_SERVICE_HOST=host.docker.internal
+      - WALLET_SERVICE_PORT=8083
+      - BOOKING_SERVICE_HOST=host.docker.internal
+      - BOOKING_SERVICE_PORT=8082
+      - USER_SERVICE_HOST=host.docker.internal
+      - USER_SERVICE_PORT=8081 
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+networks:
+  service-network:
+    driver: bridge
