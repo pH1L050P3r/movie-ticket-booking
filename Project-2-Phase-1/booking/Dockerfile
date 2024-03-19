@@ -1,5 +1,5 @@
 FROM openjdk:17-jdk-slim
-RUN apt-get install maven
+RUN apt-get update && apt-get install -y maven
 WORKDIR /app
 COPY . ${WORKDIR}
 EXPOSE 8080
