@@ -27,7 +27,7 @@ services:
     networks:
       - service-network
     ports:
-      - "8082:8080"
+      - 8082:8080
     environment:
       - WALLET_SERVICE_HOST=host.docker.internal
       - WALLET_SERVICE_PORT=8083
