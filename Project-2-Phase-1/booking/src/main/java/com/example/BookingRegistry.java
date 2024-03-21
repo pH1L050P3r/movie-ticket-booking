@@ -1,13 +1,10 @@
 package com.example;
 
 import java.io.FileReader;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-
-import com.example.ShowActor.Show;
 
 import akka.actor.typed.Behavior;
 import akka.actor.typed.ActorRef;
@@ -22,25 +19,37 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
-    Map<Long, ActorRef<ShowActor.Command>> showsMap = new HashMap<>();
-    Map<Long, ActorRef<TheatreActor.Command>> theatreMap = new HashMap<>();
-
+    private Map<Long, ActorRef<ShowActor.Command>> showsMap = new HashMap<>();
+    private Map<Long, ActorRef<TheatreActor.Command>> theatreMap = new HashMap<>();
     private final static Logger log = LoggerFactory.getLogger(BookingRegistry.class);
 
     sealed interface Command {
     }
 
-    public final static record GetShow(ActorRef<GetShowResponse> retplyTo, Long id) implements Command {
+    public final static record GetShowRequest(ActorRef<GetShowResponse> retplyTo, Long id) implements Command {
     }
 
-    public final static record GetShowResponse(Show show) {
+    public final static record GetTheatreRequest(ActorRef<GetTheatreResponse> replyTo, Long id) implements Command {
+    }
+
+    public final static record GetTheatreAllShowsRequest(ActorRef<GetTheatreAllShowsResponse> replyTo, Long threatreId)
+            implements Command {
+    }
+
+    public final static record GetShowResponse(ShowActor.Show show) {
+    }
+
+    public final static record GetTheatreResponse(TheatreActor.Theatre theatre) {
+    }
+
+    public final static record GetTheatreAllShowsResponse(List<ShowActor.Show> shows) {
     }
 
     public static Behavior<BookingRegistry.Command> create() {
         return Behaviors.setup(BookingRegistry::new);
     }
 
-    public BookingRegistry(ActorContext<BookingRegistry.Command> context) {
+    private BookingRegistry(ActorContext<BookingRegistry.Command> context) {
         super(context);
         loadActorsFromFile(context);
     }
@@ -48,16 +57,31 @@ class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
     @Override
     public Receive<Command> createReceive() {
         return newReceiveBuilder()
-                .onMessage(GetShow.class, this::onGetShow)
+                .onMessage(GetShowRequest.class, this::onGetShow)
+                .onMessage(GetTheatreRequest.class, this::onGetTheatre)
+                .onMessage(GetTheatreAllShowsRequest.class, this::onGetTheatreAllShows)
                 .build();
     }
 
-    private Behavior<Command> onGetShow(GetShow command) {
-        ActorRef<ShowActor.Command> showActor = showsMap.get(command.id());
-        if (showActor != null)
-            showActor.tell(new ShowActor.GetShow(command.retplyTo()));
-        else
-            command.retplyTo().tell(new BookingRegistry.GetShowResponse(null));
+    private Behavior<Command> onGetShow(GetShowRequest command) {
+        getContext().spawn(RequestProcessingActor.create(), "actor")
+                .tell(new RequestProcessingActor.GetShowRequestProcess(command.retplyTo(), command.id(),
+                        Collections.unmodifiableMap(showsMap)));
+        return this;
+    }
+
+    private Behavior<Command> onGetTheatre(GetTheatreRequest command) {
+        getContext().spawn(RequestProcessingActor.create(), "processing-actor")
+                .tell(new RequestProcessingActor.GetTheatreRequestProcess(command.replyTo(), command.id(),
+                        Collections.unmodifiableMap(theatreMap)));
+        return this;
+    }
+
+    private Behavior<Command> onGetTheatreAllShows(GetTheatreAllShowsRequest command) {
+        getContext().spawn(RequestProcessingActor.create(), "processing-actor")
+                .tell(new RequestProcessingActor.GetTheatreAllShowsRequestProcess(command.replyTo(),
+                        command.threatreId(),
+                        Collections.unmodifiableMap(theatreMap)));
         return this;
     }
 
@@ -89,9 +113,9 @@ class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
                 Long price = Long.valueOf(record[3]);
                 Long seatsAvailable = Long.valueOf(record[4]);
                 ActorRef<ShowActor.Command> showActor = context.spawn(
-                        ShowActor.create(id, title, price, seatsAvailable, theatreActor),
+                        ShowActor.create(id, title, price, seatsAvailable, theatreId, theatreActor),
                         "Show-" + Long.toString(id));
-                theatreActor.tell(new TheatreActor.UpdateShows(showActor));
+                theatreActor.tell(new TheatreActor.UpdateShows(id, showActor));
                 showsMap.put(id, showActor);
             }
         } catch (Exception e) {

@@ -35,7 +35,7 @@ public class StartApp {
                     "BookingRegistry");
 
             BookingRoutes bookingRoutes = new BookingRoutes(context.getSystem(), bookingRegistryActor);
-            startHttpServer(bookingRoutes.showRoute(), context.getSystem());
+            startHttpServer(bookingRoutes.urlRoute(), context.getSystem());
 
             return Behaviors.empty();
         });
