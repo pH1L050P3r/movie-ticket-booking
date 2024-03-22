@@ -40,6 +40,11 @@ class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
   )
     implements Command {}
 
+  public static final record GetAllTheatresRequest(
+    ActorRef<GetAllTheatresResponse> replyTo
+  )
+    implements Command {}
+
   public static final record GetTheatreAllShowsRequest(
     ActorRef<GetTheatreAllShowsResponse> replyTo,
     Long threatreId
@@ -66,6 +71,12 @@ class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
 
   public static final record GetTheatreResponse(
     TheatreActor.Theatre body,
+    StatusCode statusCode,
+    String message
+  ) {}
+
+  public static final record GetAllTheatresResponse(
+    List<TheatreActor.Theatre> body,
     StatusCode statusCode,
     String message
   ) {}
@@ -118,6 +129,7 @@ class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
       .onMessage(GetTheatreAllShowsRequest.class, this::onGetTheatreAllShows)
       .onMessage(CreateBookingRequest.class, this::onCreateBooking)
       .onMessage(GetUserAllBookingsRequest.class, this::onGetUserAllBookings)
+      .onMessage(GetAllTheatresRequest.class, this::onGetAllTheatres)
       .build();
   }
 
@@ -141,6 +153,18 @@ class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
         new RequestProcessingActor.GetTheatreRequestProcess(
           command.replyTo(),
           command.id(),
+          Collections.unmodifiableMap(theatreMap)
+        )
+      );
+    return this;
+  }
+
+  private Behavior<Command> onGetAllTheatres(GetAllTheatresRequest command) {
+    getContext()
+      .spawn(RequestProcessingActor.create(), "processing-actor")
+      .tell(
+        new RequestProcessingActor.GetAllTheatresRequestProcess(
+          command.replyTo(),
           Collections.unmodifiableMap(theatreMap)
         )
       );

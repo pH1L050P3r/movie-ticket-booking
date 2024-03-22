@@ -63,6 +63,15 @@ public class BookingRoutes {
     );
   }
 
+  private CompletionStage<BookingRegistry.GetAllTheatresResponse> getAllTheatres() {
+    return AskPattern.ask(
+      bookingRegistryActor,
+      BookingRegistry.GetAllTheatresRequest::new,
+      askTimeout,
+      scheduler
+    );
+  }
+
   private CompletionStage<BookingRegistry.GetTheatreAllShowsResponse> getTheatreAllShows(
     Long theatreId
   ) {
@@ -120,13 +129,12 @@ public class BookingRoutes {
                   get(() ->
                     onSuccess(
                       getTheatreAllShows(theatreId),
-                      theatre -> {
-                        return complete(
+                      theatre ->
+                        complete(
                           theatre.statusCode(),
                           theatre.body(),
                           Jackson.marshaller()
-                        );
-                      }
+                        )
                     )
                   )
               )
@@ -137,28 +145,43 @@ public class BookingRoutes {
 
   public Route theatreRoute() {
     return pathPrefix(
-      "theatre",
+      "theatres",
       () ->
-        path(
-          PathMatchers.longSegment(),
-          (Long theatreId) ->
+        concat(
+          path(
+            PathMatchers.longSegment(),
+            (Long theatreId) ->
+              get(() ->
+                onSuccess(
+                  getTheatre(theatreId),
+                  theatre -> {
+                    if (theatre.statusCode() == StatusCodes.OK) return complete(
+                      theatre.statusCode(),
+                      theatre.body(),
+                      Jackson.marshaller()
+                    );
+                    return complete(
+                      theatre.statusCode(),
+                      theatre.message(),
+                      Jackson.marshaller()
+                    );
+                  }
+                )
+              )
+          ),
+          pathEnd(() ->
             get(() ->
               onSuccess(
-                getTheatre(theatreId),
-                theatre -> {
-                  if (theatre.statusCode() == StatusCodes.OK) return complete(
-                    theatre.statusCode(),
-                    theatre.body(),
+                getAllTheatres(),
+                theatres ->
+                  complete(
+                    theatres.statusCode(),
+                    theatres.body(),
                     Jackson.marshaller()
-                  );
-                  return complete(
-                    theatre.statusCode(),
-                    theatre.message(),
-                    Jackson.marshaller()
-                  );
-                }
+                  )
               )
             )
+          )
         )
     );
   }
@@ -178,13 +201,12 @@ public class BookingRoutes {
                 bookingBody ->
                   onSuccess(
                     createBooking(bookingBody),
-                    performed -> {
-                      return complete(
+                    performed ->
+                      complete(
                         performed.statusCode(),
                         performed.body(),
                         Jackson.marshaller()
-                      );
-                    }
+                      )
                   )
               )
             )

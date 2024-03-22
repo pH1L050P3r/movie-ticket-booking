@@ -11,6 +11,7 @@ import akka.actor.typed.javadsl.Receive;
 import akka.http.javadsl.model.StatusCodes;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletionStage;
@@ -52,6 +53,12 @@ public class RequestProcessingActor
   )
     implements Command {}
 
+  public static final record GetAllTheatresRequestProcess(
+    ActorRef<BookingRegistry.GetAllTheatresResponse> replyTo,
+    Map<Long, ActorRef<TheatreActor.Command>> theatreMap
+  )
+    implements Command {}
+
   public static final record GetTheatreAllShowsRequestProcess(
     ActorRef<BookingRegistry.GetTheatreAllShowsResponse> replyTo,
     Long theatreId,
@@ -87,6 +94,7 @@ public class RequestProcessingActor
         GetUserAllBookingsRequestProcess.class,
         this::onGetUserAllBookings
       )
+      .onMessage(GetAllTheatresRequestProcess.class, this::onGetAllTheatres)
       .build();
   }
 
@@ -97,7 +105,7 @@ public class RequestProcessingActor
     if (showActor != null) {
       CompletionStage<ShowActor.Show> completion = AskPattern.ask(
         showActor,
-        ref -> new ShowActor.GetShow(ref),
+        ShowActor.GetShow::new,
         askTimeout,
         scheduler
       );
@@ -129,7 +137,7 @@ public class RequestProcessingActor
     if (theatreActor != null) {
       CompletionStage<TheatreActor.Theatre> completion = AskPattern.ask(
         theatreActor,
-        ref -> new TheatreActor.GetTheatre(ref),
+        TheatreActor.GetTheatre::new,
         askTimeout,
         scheduler
       );
@@ -151,6 +159,36 @@ public class RequestProcessingActor
           )
         );
     }
+    return Behaviors.stopped();
+  }
+
+  private Behavior<Command> onGetAllTheatres(
+    GetAllTheatresRequestProcess message
+  ) {
+    Collection<ActorRef<TheatreActor.Command>> theatresActors = message
+      .theatreMap()
+      .values();
+    List<TheatreActor.Theatre> theatres = new ArrayList<>();
+    List<CompletionStage<TheatreActor.Theatre>> completionStages = new ArrayList<>();
+
+    for (ActorRef<TheatreActor.Command> theatreActor : theatresActors) {
+      CompletionStage<TheatreActor.Theatre> completion = AskPattern.ask(
+        theatreActor,
+        TheatreActor.GetTheatre::new,
+        askTimeout,
+        scheduler
+      );
+      completionStages.add(completion);
+    }
+
+    for (CompletionStage<TheatreActor.Theatre> completion : completionStages) {
+      completion.thenAccept(theatres::add);
+    }
+    message
+      .replyTo()
+      .tell(
+        new BookingRegistry.GetAllTheatresResponse(theatres, StatusCodes.OK, "")
+      );
     return Behaviors.stopped();
   }
 
