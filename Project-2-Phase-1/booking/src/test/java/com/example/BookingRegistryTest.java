@@ -1,6 +1,6 @@
 package com.example;
 
-//#test-top
+// #test-top
 import akka.actor.typed.ActorRef;
 import akka.http.javadsl.model.*;
 import akka.http.javadsl.testkit.JUnitRouteTest;
@@ -11,7 +11,7 @@ import akka.http.javadsl.model.HttpRequest;
 import akka.http.javadsl.model.StatusCodes;
 import akka.actor.testkit.typed.javadsl.TestKitJunitResource;
 
-//#set-up
+// #set-up
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class UserRoutesTest extends JUnitRouteTest {
 
@@ -43,29 +43,25 @@ public class UserRoutesTest extends JUnitRouteTest {
     // #actual-test
     @Test
     public void test1NoUsers() {
-        appRoute.run(HttpRequest.GET("/users"))
-                .assertStatusCode(StatusCodes.OK)
-                .assertMediaType("application/json")
-                .assertEntity("{\"users\":[]}");
+        appRoute.run(HttpRequest.GET("/users")).assertStatusCode(StatusCodes.OK)
+                .assertMediaType("application/json").assertEntity("{\"users\":[]}");
     }
 
     // #actual-test
     // #testing-post
     @Test
     public void test2HandlePOST() {
-        appRoute.run(HttpRequest.POST("/users")
-                .withEntity(MediaTypes.APPLICATION_JSON.toContentType(),
+        appRoute.run(
+                HttpRequest.POST("/users").withEntity(MediaTypes.APPLICATION_JSON.toContentType(),
                         "{\"name\": \"Kapi\", \"age\": 42, \"countryOfResidence\": \"jp\"}"))
-                .assertStatusCode(StatusCodes.CREATED)
-                .assertMediaType("application/json")
+                .assertStatusCode(StatusCodes.CREATED).assertMediaType("application/json")
                 .assertEntity("{\"description\":\"User Kapi created.\"}");
     }
     // #testing-post
 
     @Test
     public void test3Remove() {
-        appRoute.run(HttpRequest.DELETE("/users/Kapi"))
-                .assertStatusCode(StatusCodes.OK)
+        appRoute.run(HttpRequest.DELETE("/users/Kapi")).assertStatusCode(StatusCodes.OK)
                 .assertMediaType("application/json")
                 .assertEntity("{\"description\":\"User Kapi deleted.\"}");
 
