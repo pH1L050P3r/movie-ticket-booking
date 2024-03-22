@@ -12,6 +12,9 @@ import akka.actor.typed.javadsl.AbstractBehavior;
 import akka.actor.typed.javadsl.ActorContext;
 import akka.actor.typed.javadsl.Behaviors;
 import akka.actor.typed.javadsl.Receive;
+import akka.http.javadsl.model.StatusCode;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
 
@@ -36,13 +39,31 @@ class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
             implements Command {
     }
 
-    public final static record GetShowResponse(ShowActor.Show show) {
+    public final static record CreateBookingRequest(ActorRef<CreateBookingResponse> replyTo,
+            CreateBookingRequestBody requestBody) implements Command {
     }
 
-    public final static record GetTheatreResponse(TheatreActor.Theatre theatre) {
+    public final static record GetShowResponse(ShowActor.Show body, StatusCode statusCode, String message) {
     }
 
-    public final static record GetTheatreAllShowsResponse(List<ShowActor.Show> shows) {
+    public final static record GetTheatreResponse(TheatreActor.Theatre body, StatusCode statusCode, String message) {
+    }
+
+    public final static record GetTheatreAllShowsResponse(List<ShowActor.Show> body, StatusCode statusCode,
+            String message) {
+    }
+
+    public final static record CreateBookingResponse(CreateBookingResponseBody body, StatusCode statusCode,
+            String message) {
+    }
+
+    public final static record CreateBookingRequestBody(@JsonProperty("show_id") Long showId,
+            @JsonProperty("user_id") Long userId, @JsonProperty("seats_booked") Long seatsBooked) {
+    }
+
+    public final static record CreateBookingResponseBody(@JsonProperty("id") Long id,
+            @JsonProperty("show_id") Long showId, @JsonProperty("user_id") Long userId,
+            @JsonProperty("seats_booked") Long seatsBooked) {
     }
 
     public static Behavior<BookingRegistry.Command> create() {
@@ -60,6 +81,7 @@ class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
                 .onMessage(GetShowRequest.class, this::onGetShow)
                 .onMessage(GetTheatreRequest.class, this::onGetTheatre)
                 .onMessage(GetTheatreAllShowsRequest.class, this::onGetTheatreAllShows)
+                .onMessage(CreateBookingRequest.class, this::onCreateBooking)
                 .build();
     }
 
@@ -82,6 +104,13 @@ class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
                 .tell(new RequestProcessingActor.GetTheatreAllShowsRequestProcess(command.replyTo(),
                         command.threatreId(),
                         Collections.unmodifiableMap(theatreMap)));
+        return this;
+    }
+
+    private Behavior<Command> onCreateBooking(CreateBookingRequest message) {
+        getContext().spawn(RequestProcessingActor.create(), "processing-actor")
+                .tell(new RequestProcessingActor.CreateBookingRequestProcess(message.replyTo(),
+                        Collections.unmodifiableMap(showsMap), message.requestBody()));
         return this;
     }
 

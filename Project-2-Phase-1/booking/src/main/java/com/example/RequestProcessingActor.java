@@ -1,5 +1,6 @@
 package com.example;
 
+import java.io.ObjectInputFilter.Status;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,6 +20,7 @@ import akka.actor.typed.javadsl.ActorContext;
 import akka.actor.typed.javadsl.AskPattern;
 import akka.actor.typed.javadsl.Behaviors;
 import akka.actor.typed.javadsl.Receive;
+import akka.http.javadsl.model.StatusCodes;
 
 public class RequestProcessingActor extends AbstractBehavior<RequestProcessingActor.Command> {
 
@@ -54,11 +56,20 @@ public class RequestProcessingActor extends AbstractBehavior<RequestProcessingAc
             Map<Long, ActorRef<TheatreActor.Command>> theatreMap) implements Command {
     }
 
+    public final static record CreateBookingRequestProcess(
+            ActorRef<BookingRegistry.CreateBookingResponse> replyTo,
+            Map<Long, ActorRef<ShowActor.Command>> showMap, BookingRegistry.CreateBookingRequestBody requestBody)
+            implements Command {
+    }
+
     @Override
     public Receive<Command> createReceive() {
-        return newReceiveBuilder().onMessage(GetShowRequestProcess.class, this::onGetShow)
+        return newReceiveBuilder()
+                .onMessage(GetShowRequestProcess.class, this::onGetShow)
                 .onMessage(GetTheatreRequestProcess.class, this::onGetTheatre)
-                .onMessage(GetTheatreAllShowsRequestProcess.class, this::onGetTheatreAllShows).build();
+                .onMessage(GetTheatreAllShowsRequestProcess.class, this::onGetTheatreAllShows)
+                .onMessage(CreateBookingRequestProcess.class, this::onCreateBooking)
+                .build();
     }
 
     private Behavior<Command> onGetShow(GetShowRequestProcess command) {
@@ -67,10 +78,10 @@ public class RequestProcessingActor extends AbstractBehavior<RequestProcessingAc
             CompletionStage<ShowActor.Show> completion = AskPattern.ask(showActor,
                     ref -> new ShowActor.GetShow(ref), askTimeout, scheduler);
             completion.thenAccept(response -> {
-                command.retplyTo().tell(new BookingRegistry.GetShowResponse(response));
+                command.retplyTo().tell(new BookingRegistry.GetShowResponse(response, StatusCodes.OK, ""));
             });
         } else {
-            command.retplyTo().tell(new BookingRegistry.GetShowResponse(null));
+            command.retplyTo().tell(new BookingRegistry.GetShowResponse(null, StatusCodes.NOT_FOUND, "Show not found"));
         }
         return Behaviors.stopped();
     }
@@ -81,10 +92,11 @@ public class RequestProcessingActor extends AbstractBehavior<RequestProcessingAc
             CompletionStage<TheatreActor.Theatre> completion = AskPattern.ask(theatreActor,
                     ref -> new TheatreActor.GetTheatre(ref), askTimeout, scheduler);
             completion.thenAccept(response -> {
-                command.replyTo().tell(new BookingRegistry.GetTheatreResponse(response));
+                command.replyTo().tell(new BookingRegistry.GetTheatreResponse(response, StatusCodes.OK, ""));
             });
         } else {
-            command.replyTo().tell(new BookingRegistry.GetTheatreResponse(null));
+            command.replyTo()
+                    .tell(new BookingRegistry.GetTheatreResponse(null, StatusCodes.NOT_FOUND, "Theatre not Found"));
         }
         return Behaviors.stopped();
     }
@@ -95,12 +107,61 @@ public class RequestProcessingActor extends AbstractBehavior<RequestProcessingAc
             CompletionStage<ShowActor.Shows> completion = AskPattern.ask(theatreActor,
                     ref -> new TheatreActor.GetThreatreShows(ref), askTimeout, scheduler);
             completion.thenAccept(response -> {
-                command.replyTo().tell(new BookingRegistry.GetTheatreAllShowsResponse(response.shows()));
+                command.replyTo()
+                        .tell(new BookingRegistry.GetTheatreAllShowsResponse(response.shows(), StatusCodes.OK, ""));
             });
         } else {
             List<ShowActor.Show> empltyList = new ArrayList<>();
-            command.replyTo().tell(new BookingRegistry.GetTheatreAllShowsResponse(empltyList));
+            command.replyTo().tell(new BookingRegistry.GetTheatreAllShowsResponse(empltyList, StatusCodes.OK, ""));
         }
         return Behaviors.stopped();
+    }
+
+    private Behavior<Command> onCreateBooking(CreateBookingRequestProcess message) {
+        Long showId = message.requestBody.showId();
+        Long userId = message.requestBody.userId();
+        Long seatsBooked = message.requestBody.seatsBooked();
+
+        ActorRef<ShowActor.Command> showActor = message.showMap().get(showId);
+        if (!isUserExist()) {
+            // Check user exist or not
+            // return
+            return Behaviors.stopped();
+        }
+
+        String paymentResponse = payment();
+
+        if (!paymentResponse.equalsIgnoreCase("SUCCESS")) {
+            // payment
+            // if payment fails return
+            return Behaviors.stopped();
+        }
+
+        // create booking
+        CompletionStage<ShowActor.Booking> completion = AskPattern.ask(showActor,
+                ref -> new ShowActor.CreateShowBooking(ref, userId, seatsBooked), askTimeout, scheduler);
+
+        completion.thenAccept(response -> {
+            if (response.id() == -1)
+                message.replyTo().tell(new BookingRegistry.CreateBookingResponse(null, StatusCodes.BAD_REQUEST,
+                        "Seats not Available"));
+            else
+                message.replyTo
+                        .tell(new BookingRegistry.CreateBookingResponse(new BookingRegistry.CreateBookingResponseBody(
+                                response.id(), response.showId(), response.userId(), response.seatsBooked()),
+                                StatusCodes.OK, ""));
+        });
+
+        // if create booking fails refund
+        // return response
+        return Behaviors.stopped();
+    }
+
+    private String payment() {
+        return "SUCCESS";
+    }
+
+    private Boolean isUserExist() {
+        return true;
     }
 }
