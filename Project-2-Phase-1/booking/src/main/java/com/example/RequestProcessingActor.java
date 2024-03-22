@@ -1,6 +1,5 @@
 package com.example;
 
-import java.io.ObjectInputFilter.Status;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -124,36 +123,34 @@ public class RequestProcessingActor extends AbstractBehavior<RequestProcessingAc
 
         ActorRef<ShowActor.Command> showActor = message.showMap().get(showId);
         if (!isUserExist()) {
-            // Check user exist or not
-            // return
+            message.replyTo().tell(new BookingRegistry.CreateBookingResponse(null, StatusCodes.BAD_REQUEST,
+                    "User not exists"));
             return Behaviors.stopped();
         }
 
         String paymentResponse = payment();
-
         if (!paymentResponse.equalsIgnoreCase("SUCCESS")) {
-            // payment
-            // if payment fails return
+            message.replyTo().tell(new BookingRegistry.CreateBookingResponse(null, StatusCodes.BAD_REQUEST,
+                    "Payment failed"));
             return Behaviors.stopped();
         }
 
         // create booking
         CompletionStage<ShowActor.Booking> completion = AskPattern.ask(showActor,
                 ref -> new ShowActor.CreateShowBooking(ref, userId, seatsBooked), askTimeout, scheduler);
-
         completion.thenAccept(response -> {
-            if (response.id() == -1)
+            if (response.id() == -1) {
                 message.replyTo().tell(new BookingRegistry.CreateBookingResponse(null, StatusCodes.BAD_REQUEST,
                         "Seats not Available"));
-            else
+                // refund;
+            } else {
                 message.replyTo
-                        .tell(new BookingRegistry.CreateBookingResponse(new BookingRegistry.CreateBookingResponseBody(
-                                response.id(), response.showId(), response.userId(), response.seatsBooked()),
+                        .tell(new BookingRegistry.CreateBookingResponse(
+                                new BookingRegistry.CreateBookingResponseBody(
+                                        response.id(), response.showId(), response.userId(), response.seatsBooked()),
                                 StatusCodes.OK, ""));
+            }
         });
-
-        // if create booking fails refund
-        // return response
         return Behaviors.stopped();
     }
 

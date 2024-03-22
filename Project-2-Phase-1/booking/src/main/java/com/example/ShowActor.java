@@ -91,6 +91,7 @@ public class ShowActor extends AbstractBehavior<ShowActor.Command> {
             booking = new Booking(-1L, -1L, -1L, -1L);
         } else {
             booking = new Booking(message.userId(), this.id, message.userId(), message.seatsBooked());
+            this.seatsAvailable -= message.seatsBooked();
             bookings.get(message.userId()).add(booking);
         }
         message.replyTo().tell(booking);

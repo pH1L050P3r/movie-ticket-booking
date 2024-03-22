@@ -57,13 +57,14 @@ class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
             String message) {
     }
 
-    public final static record CreateBookingRequestBody(@JsonProperty("show_id") Long showId,
-            @JsonProperty("user_id") Long userId, @JsonProperty("seats_booked") Long seatsBooked) {
-    }
-
-    public final static record CreateBookingResponseBody(@JsonProperty("id") Long id,
+    public final static record CreateBookingRequestBody(
             @JsonProperty("show_id") Long showId, @JsonProperty("user_id") Long userId,
             @JsonProperty("seats_booked") Long seatsBooked) {
+    }
+
+    public final static record CreateBookingResponseBody(
+            @JsonProperty("id") Long id, @JsonProperty("show_id") Long showId,
+            @JsonProperty("user_id") Long userId, @JsonProperty("seats_booked") Long seatsBooked) {
     }
 
     public static Behavior<BookingRegistry.Command> create() {
