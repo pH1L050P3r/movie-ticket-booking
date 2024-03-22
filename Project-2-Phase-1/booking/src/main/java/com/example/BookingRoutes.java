@@ -121,7 +121,7 @@ public class BookingRoutes {
               )
           ),
           pathPrefix(
-            "theatre",
+            "theatres",
             () ->
               path(
                 PathMatchers.longSegment(),

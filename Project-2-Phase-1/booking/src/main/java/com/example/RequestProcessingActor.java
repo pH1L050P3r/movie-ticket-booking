@@ -109,13 +109,13 @@ public class RequestProcessingActor
         askTimeout,
         scheduler
       );
-      completion.thenAccept(response -> {
+      completion.thenAccept(response ->
         command
           .retplyTo()
           .tell(
             new BookingRegistry.GetShowResponse(response, StatusCodes.OK, "")
-          );
-      });
+          )
+      );
     } else {
       command
         .retplyTo()
@@ -141,13 +141,13 @@ public class RequestProcessingActor
         askTimeout,
         scheduler
       );
-      completion.thenAccept(response -> {
+      completion.thenAccept(response ->
         command
           .replyTo()
           .tell(
             new BookingRegistry.GetTheatreResponse(response, StatusCodes.OK, "")
-          );
-      });
+          )
+      );
     } else {
       command
         .replyTo()
@@ -201,11 +201,11 @@ public class RequestProcessingActor
     if (theatreActor != null) {
       CompletionStage<ShowActor.Shows> completion = AskPattern.ask(
         theatreActor,
-        ref -> new TheatreActor.GetThreatreShows(ref),
+        TheatreActor.GetThreatreShows::new,
         askTimeout,
         scheduler
       );
-      completion.thenAccept(response -> {
+      completion.thenAccept(response ->
         command
           .replyTo()
           .tell(
@@ -214,8 +214,8 @@ public class RequestProcessingActor
               StatusCodes.OK,
               ""
             )
-          );
-      });
+          )
+      );
     } else {
       List<ShowActor.Show> empltyList = new ArrayList<>();
       command
