@@ -92,13 +92,13 @@ public class TheatreActor extends AbstractBehavior<TheatreActor.Command> {
   }
 
   private Behavior<Command> onGetTheatreShows(GetThreatreShows command) {
-    List<ShowActor.Show> shows = new ArrayList<>();
+    List<ShowActor.Show> showList = new ArrayList<>();
     List<CompletionStage<ShowActor.Show>> completionStages = new ArrayList<>();
 
     for (ActorRef<ShowActor.Command> showActor : this.shows.values()) {
       CompletionStage<ShowActor.Show> completion = AskPattern.ask(
         showActor,
-        ref -> new ShowActor.GetShow(ref),
+        ShowActor.GetShow::new,
         askTimeout,
         scheduler
       );
@@ -106,15 +106,9 @@ public class TheatreActor extends AbstractBehavior<TheatreActor.Command> {
     }
 
     for (CompletionStage<ShowActor.Show> completion : completionStages) {
-      completion.thenAccept(response -> {
-        shows.add(response);
-      });
+      completion.thenAccept(showList::add);
     }
-    command.replyTo().tell(new ShowActor.Shows(shows));
-    // getContext().spawn(RequestProcessingActor.create(), "actor")
-    // .tell(new RequestProcessingActor.GetShowRequestProcess(command.retplyTo(),
-    // command.id(),
-    // Collections.unmodifiableMap(showsMap)));
+    command.replyTo().tell(new ShowActor.Shows(showList));
     return this;
   }
 }

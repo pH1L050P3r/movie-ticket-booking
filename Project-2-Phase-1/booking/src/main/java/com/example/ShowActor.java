@@ -16,7 +16,6 @@ import org.slf4j.LoggerFactory;
 public class ShowActor extends AbstractBehavior<ShowActor.Command> {
 
   private Long id;
-  // private Theatre theatre;
   private String title;
   private Long price;
   private Long seatsAvailable;
@@ -99,7 +98,7 @@ public class ShowActor extends AbstractBehavior<ShowActor.Command> {
     this.seatsAvailable = seatsAvailable;
     this.theatreActor = theatreActor;
     this.theatreId = theatreId;
-    this.bookings = new HashMap<Long, List<Booking>>();
+    this.bookings = new HashMap<>();
   }
 
   @Override
