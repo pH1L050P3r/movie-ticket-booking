@@ -63,6 +63,12 @@ class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
   )
     implements Command {}
 
+  public static final record DeleteUserAllBookingsRequest(
+    ActorRef<DeleteUserAllBookingsResponse> replyTo,
+    Long userId
+  )
+    implements Command {}
+
   public static final record GetShowResponse(
     ShowActor.Show body,
     StatusCode statusCode,
@@ -99,6 +105,11 @@ class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
     String message
   ) {}
 
+  public static final record DeleteUserAllBookingsResponse(
+    StatusCode statusCode,
+    String message
+  ) {}
+
   public static final record CreateBookingRequestBody(
     @JsonProperty("show_id") Long showId,
     @JsonProperty("user_id") Long userId,
@@ -130,6 +141,10 @@ class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
       .onMessage(CreateBookingRequest.class, this::onCreateBooking)
       .onMessage(GetUserAllBookingsRequest.class, this::onGetUserAllBookings)
       .onMessage(GetAllTheatresRequest.class, this::onGetAllTheatres)
+      .onMessage(
+        DeleteUserAllBookingsRequest.class,
+        this::onDeleteUserAllBookings
+      )
       .build();
   }
 
@@ -196,6 +211,21 @@ class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
           command.replyTo(),
           command.userId(),
           Collections.unmodifiableMap(showsMap)
+        )
+      );
+    return this;
+  }
+
+  private Behavior<Command> onDeleteUserAllBookings(
+    DeleteUserAllBookingsRequest command
+  ) {
+    getContext()
+      .spawn(RequestProcessingActor.create(), "processing-actor")
+      .tell(
+        new RequestProcessingActor.DeleteUserAllBookingsRequestProcess(
+          command.replyTo,
+          Collections.unmodifiableMap(showsMap),
+          command.userId()
         )
       );
     return this;

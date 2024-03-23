@@ -2,6 +2,7 @@ package com.example;
 
 import static akka.http.javadsl.server.Directives.complete;
 import static akka.http.javadsl.server.Directives.concat;
+import static akka.http.javadsl.server.Directives.delete;
 import static akka.http.javadsl.server.Directives.entity;
 import static akka.http.javadsl.server.Directives.get;
 import static akka.http.javadsl.server.Directives.onSuccess;
@@ -89,6 +90,28 @@ public class BookingRoutes {
     return AskPattern.ask(
       bookingRegistryActor,
       ref -> new BookingRegistry.CreateBookingRequest(ref, requestBody),
+      askTimeout,
+      scheduler
+    );
+  }
+
+  private CompletionStage<BookingRegistry.GetUserAllBookingsResponse> getUserAllBookings(
+    Long userId
+  ) {
+    return AskPattern.ask(
+      bookingRegistryActor,
+      ref -> new BookingRegistry.GetUserAllBookingsRequest(ref, userId),
+      askTimeout,
+      scheduler
+    );
+  }
+
+  private CompletionStage<BookingRegistry.DeleteUserAllBookingsResponse> deleteUserAllBookings(
+    Long userId
+  ) {
+    return AskPattern.ask(
+      bookingRegistryActor,
+      ref -> new BookingRegistry.DeleteUserAllBookingsRequest(ref, userId),
       askTimeout,
       scheduler
     );
@@ -190,26 +213,55 @@ public class BookingRoutes {
     return pathPrefix(
       "bookings",
       () ->
-        pathEnd(() ->
-          concat(
-            get(() -> complete("GET request received for /booking")),
-            post(() ->
-              entity(
-                Jackson.unmarshaller(
-                  BookingRegistry.CreateBookingRequestBody.class
-                ),
-                bookingBody ->
-                  onSuccess(
-                    createBooking(bookingBody),
-                    performed ->
-                      complete(
-                        performed.statusCode(),
-                        performed.body(),
-                        Jackson.marshaller()
-                      )
-                  )
+        concat(
+          pathEnd(() ->
+            concat(
+              get(() -> complete("GET request received for /booking")),
+              post(() ->
+                entity(
+                  Jackson.unmarshaller(
+                    BookingRegistry.CreateBookingRequestBody.class
+                  ),
+                  bookingBody ->
+                    onSuccess(
+                      createBooking(bookingBody),
+                      performed ->
+                        complete(
+                          performed.statusCode(),
+                          performed.body(),
+                          Jackson.marshaller()
+                        )
+                    )
+                )
               )
             )
+          ),
+          pathPrefix(
+            "users",
+            () ->
+              path(
+                PathMatchers.longSegment(),
+                (Long userId) ->
+                  concat(
+                    get(() ->
+                      onSuccess(
+                        getUserAllBookings(userId),
+                        theatre ->
+                          complete(
+                            theatre.statusCode(),
+                            theatre.body(),
+                            Jackson.marshaller()
+                          )
+                      )
+                    ),
+                    delete(() ->
+                      onSuccess(
+                        deleteUserAllBookings(userId),
+                        theatre -> complete(theatre.statusCode())
+                      )
+                    )
+                  )
+              )
           )
         )
     );

@@ -8,7 +8,9 @@ import akka.actor.typed.javadsl.ActorContext;
 import akka.actor.typed.javadsl.AskPattern;
 import akka.actor.typed.javadsl.Behaviors;
 import akka.actor.typed.javadsl.Receive;
+import akka.http.javadsl.Http;
 import akka.http.javadsl.model.StatusCodes;
+import com.example.ShowActor.Show;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -23,6 +25,7 @@ public class RequestProcessingActor
 
   private final Duration askTimeout;
   private final Scheduler scheduler;
+  private final Http http;
   private static final Logger log = LoggerFactory.getLogger(
     RequestProcessingActor.class
   );
@@ -35,6 +38,7 @@ public class RequestProcessingActor
     super(context);
     this.askTimeout = Duration.ofSeconds(30);
     this.scheduler = getContext().getSystem().scheduler();
+    this.http = Http.get(getContext().getSystem());
   }
 
   sealed interface Command {}
@@ -80,6 +84,13 @@ public class RequestProcessingActor
   )
     implements Command {}
 
+  public static final record DeleteUserAllBookingsRequestProcess(
+    ActorRef<BookingRegistry.DeleteUserAllBookingsResponse> replyTo,
+    Map<Long, ActorRef<ShowActor.Command>> showMap,
+    Long userId
+  )
+    implements Command {}
+
   @Override
   public Receive<Command> createReceive() {
     return newReceiveBuilder()
@@ -95,6 +106,10 @@ public class RequestProcessingActor
         this::onGetUserAllBookings
       )
       .onMessage(GetAllTheatresRequestProcess.class, this::onGetAllTheatres)
+      .onMessage(
+        DeleteUserAllBookingsRequestProcess.class,
+        this::onDeleteUserAllBookings
+      )
       .build();
   }
 
@@ -103,19 +118,14 @@ public class RequestProcessingActor
       .showMap()
       .get(command.showId());
     if (showActor != null) {
-      CompletionStage<ShowActor.Show> completion = AskPattern.ask(
+      Show show = ShowUtils.getShowFromShowActor(
         showActor,
-        ShowActor.GetShow::new,
         askTimeout,
         scheduler
       );
-      completion.thenAccept(response ->
-        command
-          .retplyTo()
-          .tell(
-            new BookingRegistry.GetShowResponse(response, StatusCodes.OK, "")
-          )
-      );
+      command
+        .retplyTo()
+        .tell(new BookingRegistry.GetShowResponse(show, StatusCodes.OK, ""));
     } else {
       command
         .retplyTo()
@@ -223,8 +233,8 @@ public class RequestProcessingActor
         .tell(
           new BookingRegistry.GetTheatreAllShowsResponse(
             empltyList,
-            StatusCodes.OK,
-            ""
+            StatusCodes.NOT_FOUND,
+            "Theatre not exists"
           )
         );
     }
@@ -274,21 +284,30 @@ public class RequestProcessingActor
     Long seatsBooked = message.requestBody.seatsBooked();
 
     ActorRef<ShowActor.Command> showActor = message.showMap().get(showId);
-    if (!isUserExist()) {
+    if (showActor == null || !UserService.isUserExist(userId, http)) {
       message
         .replyTo()
         .tell(
           new BookingRegistry.CreateBookingResponse(
             null,
             StatusCodes.BAD_REQUEST,
-            "User not exists"
+            "User or Show does not exists"
           )
         );
       return Behaviors.stopped();
     }
 
-    String paymentResponse = payment();
-    if (!paymentResponse.equalsIgnoreCase("SUCCESS")) {
+    Show show = ShowUtils.getShowFromShowActor(
+      showActor,
+      askTimeout,
+      scheduler
+    );
+    Long amount = show.price() * seatsBooked;
+    String paymentResponse = PaymentService.payment(userId, amount, http);
+    if (
+      show.seatsAvailable() < seatsBooked ||
+      !paymentResponse.equalsIgnoreCase("SUCCESS")
+    ) {
       message
         .replyTo()
         .tell(
@@ -310,6 +329,7 @@ public class RequestProcessingActor
     );
     completion.thenAccept(response -> {
       if (response.id() == -1) {
+        PaymentService.refund(userId, amount, http);
         message
           .replyTo()
           .tell(
@@ -319,7 +339,6 @@ public class RequestProcessingActor
               "Seats not Available"
             )
           );
-        // refund;
       } else {
         message.replyTo.tell(
           new BookingRegistry.CreateBookingResponse(
@@ -338,11 +357,9 @@ public class RequestProcessingActor
     return Behaviors.stopped();
   }
 
-  private String payment() {
-    return "SUCCESS";
-  }
-
-  private Boolean isUserExist() {
-    return true;
+  private Behavior<Command> onDeleteUserAllBookings(
+    DeleteUserAllBookingsRequestProcess message
+  ) {
+    return Behaviors.stopped();
   }
 }
