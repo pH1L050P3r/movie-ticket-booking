@@ -10,10 +10,12 @@ import akka.actor.typed.javadsl.Behaviors;
 import akka.actor.typed.javadsl.Receive;
 import akka.http.javadsl.Http;
 import akka.http.javadsl.model.StatusCodes;
+import com.example.ShowActor.DeleteBookingResponse;
 import com.example.ShowActor.Show;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletionStage;
@@ -91,6 +93,14 @@ public class RequestProcessingActor
   )
     implements Command {}
 
+  public static final record DeleteUserShowBookingsRequestProcess(
+    ActorRef<BookingRegistry.DeleteUserShowBookingsResponse> replyTo,
+    Map<Long, ActorRef<ShowActor.Command>> showMap,
+    Long userId,
+    Long showId
+  )
+    implements Command {}
+
   @Override
   public Receive<Command> createReceive() {
     return newReceiveBuilder()
@@ -109,6 +119,10 @@ public class RequestProcessingActor
       .onMessage(
         DeleteUserAllBookingsRequestProcess.class,
         this::onDeleteUserAllBookings
+      )
+      .onMessage(
+        DeleteUserShowBookingsRequestProcess.class,
+        this::onDeleteUserShowBookings
       )
       .build();
   }
@@ -360,6 +374,79 @@ public class RequestProcessingActor
   private Behavior<Command> onDeleteUserAllBookings(
     DeleteUserAllBookingsRequestProcess message
   ) {
+    Long userId = message.userId();
+    if (!UserService.isUserExist(userId, http)) {
+      message
+        .replyTo()
+        .tell(
+          new BookingRegistry.DeleteUserAllBookingsResponse(
+            StatusCodes.NOT_FOUND,
+            "User does not exists"
+          )
+        );
+      return Behaviors.stopped();
+    }
+
+    DeleteBookingResponse response = ShowUtils.deleteAllUserBookings(
+      message.showMap().values(),
+      userId,
+      askTimeout,
+      scheduler
+    );
+    Long refundAmount = response.refundUserAmountMap().get(userId);
+    String status = PaymentService.refund(userId, refundAmount, http);
+    log.info("Payment Status UserId " + userId + " " + status);
+
+    message
+      .replyTo()
+      .tell(
+        new BookingRegistry.DeleteUserAllBookingsResponse(
+          StatusCodes.OK,
+          "Payment Status :" + status
+        )
+      );
+
+    return Behaviors.stopped();
+  }
+
+  private Behavior<Command> onDeleteUserShowBookings(
+    DeleteUserShowBookingsRequestProcess message
+  ) {
+    Long userId = message.userId();
+    ActorRef<ShowActor.Command> show = message.showMap().get(message.showId());
+    if (show == null || !UserService.isUserExist(userId, http)) {
+      message
+        .replyTo()
+        .tell(
+          new BookingRegistry.DeleteUserShowBookingsResponse(
+            StatusCodes.NOT_FOUND,
+            "User or Show does not exists"
+          )
+        );
+      return Behaviors.stopped();
+    }
+
+    Collection<ActorRef<ShowActor.Command>> shows = new HashSet<>();
+    shows.add(show);
+    DeleteBookingResponse response = ShowUtils.deleteAllUserBookings(
+      shows,
+      userId,
+      askTimeout,
+      scheduler
+    );
+    Long refundAmount = response.refundUserAmountMap().get(userId);
+    String status = PaymentService.refund(userId, refundAmount, http);
+    log.info("Payment Status UserId " + userId + " " + status);
+
+    message
+      .replyTo()
+      .tell(
+        new BookingRegistry.DeleteUserShowBookingsResponse(
+          StatusCodes.OK,
+          "Payment Status :" + status
+        )
+      );
+
     return Behaviors.stopped();
   }
 }

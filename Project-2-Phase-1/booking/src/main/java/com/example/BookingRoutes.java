@@ -1,15 +1,6 @@
 package com.example;
 
-import static akka.http.javadsl.server.Directives.complete;
-import static akka.http.javadsl.server.Directives.concat;
-import static akka.http.javadsl.server.Directives.delete;
-import static akka.http.javadsl.server.Directives.entity;
-import static akka.http.javadsl.server.Directives.get;
-import static akka.http.javadsl.server.Directives.onSuccess;
-import static akka.http.javadsl.server.Directives.path;
-import static akka.http.javadsl.server.Directives.pathEnd;
-import static akka.http.javadsl.server.Directives.pathPrefix;
-import static akka.http.javadsl.server.Directives.post;
+import static akka.http.javadsl.server.Directives.*;
 
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.ActorSystem;
@@ -17,6 +8,7 @@ import akka.actor.typed.Scheduler;
 import akka.actor.typed.javadsl.AskPattern;
 import akka.http.javadsl.marshallers.jackson.Jackson;
 import akka.http.javadsl.model.StatusCodes;
+import akka.http.javadsl.server.Directives;
 import akka.http.javadsl.server.PathMatchers;
 import akka.http.javadsl.server.Route;
 import com.example.BookingRegistry.CreateBookingRequestBody;
@@ -112,6 +104,20 @@ public class BookingRoutes {
     return AskPattern.ask(
       bookingRegistryActor,
       ref -> new BookingRegistry.DeleteUserAllBookingsRequest(ref, userId),
+      askTimeout,
+      scheduler
+    );
+  }
+
+  private CompletionStage<BookingRegistry.DeleteUserShowBookingsResponse> deleteUserShowBookings(
+    Long userId,
+    Long showId
+  ) {
+    log.info("I am here");
+    return AskPattern.ask(
+      bookingRegistryActor,
+      ref ->
+        new BookingRegistry.DeleteUserShowBookingsRequest(ref, userId, showId),
       askTimeout,
       scheduler
     );
@@ -239,28 +245,45 @@ public class BookingRoutes {
           pathPrefix(
             "users",
             () ->
-              path(
-                PathMatchers.longSegment(),
-                (Long userId) ->
-                  concat(
-                    get(() ->
-                      onSuccess(
-                        getUserAllBookings(userId),
-                        theatre ->
-                          complete(
-                            theatre.statusCode(),
-                            theatre.body(),
-                            Jackson.marshaller()
-                          )
-                      )
-                    ),
+              Directives.route(
+                path(
+                  PathMatchers
+                    .longSegment()
+                    .slash("shows")
+                    .slash(PathMatchers.longSegment()),
+                  (Long userId, Long showId) ->
                     delete(() ->
                       onSuccess(
-                        deleteUserAllBookings(userId),
+                        deleteUserShowBookings(userId, showId),
                         theatre -> complete(theatre.statusCode())
                       )
                     )
-                  )
+                ),
+                path(
+                  PathMatchers.longSegment(),
+                  (Long userId) ->
+                    pathEnd(() ->
+                      concat(
+                        get(() ->
+                          onSuccess(
+                            getUserAllBookings(userId),
+                            theatre ->
+                              complete(
+                                theatre.statusCode(),
+                                theatre.body(),
+                                Jackson.marshaller()
+                              )
+                          )
+                        ),
+                        delete(() ->
+                          onSuccess(
+                            deleteUserAllBookings(userId),
+                            theatre -> complete(theatre.statusCode())
+                          )
+                        )
+                      )
+                    )
+                )
               )
           )
         )
@@ -268,6 +291,6 @@ public class BookingRoutes {
   }
 
   public Route urlRoute() {
-    return concat(concat(showRoute(), theatreRoute(), bookingRoute()));
+    return concat(showRoute(), theatreRoute(), bookingRoute());
   }
 }

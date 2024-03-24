@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +42,21 @@ public class ShowActor extends AbstractBehavior<ShowActor.Command> {
     Long seatsBooked
   )
     implements Command {}
+
+  public static final record DeleteUserShowBookings(
+    ActorRef<DeleteBookingResponse> replyTo,
+    Long userId
+  )
+    implements Command {}
+
+  public static final record DeleteAllBookings(
+    ActorRef<DeleteBookingResponse> replyTo
+  )
+    implements Command {}
+
+  public static final record DeleteBookingResponse(
+    Map<Long, Long> refundUserAmountMap
+  ) {}
 
   public static final record Show(
     Long id,
@@ -107,6 +123,8 @@ public class ShowActor extends AbstractBehavior<ShowActor.Command> {
       .onMessage(GetShow.class, this::onGetShow)
       .onMessage(CreateShowBooking.class, this::onCreateShowBooking)
       .onMessage(GetUserBookings.class, this::onGetUserAllBookings)
+      .onMessage(DeleteUserShowBookings.class, this::onDeleteUserAllBooking)
+      .onMessage(DeleteAllBookings.class, this::onDeleteAllBookings)
       .build();
   }
 
@@ -143,6 +161,53 @@ public class ShowActor extends AbstractBehavior<ShowActor.Command> {
   private Behavior<Command> onGetUserAllBookings(GetUserBookings message) {
     List<Booking> userBookings = bookings.get(message.userId());
     message.replyTo().tell(new Bookings(userBookings));
+    return this;
+  }
+
+  private Behavior<Command> onDeleteUserAllBooking(
+    DeleteUserShowBookings message
+  ) {
+    List<Booking> userBookings = bookings.get(message.userId());
+    Map<Long, Long> userAmountRefundMapping = new HashMap<>();
+
+    if (userBookings == null) {
+      message.replyTo.tell(new DeleteBookingResponse(userAmountRefundMapping));
+      return this;
+    }
+
+    Long totalAmount = 0L;
+    for (Booking booking : userBookings) {
+      totalAmount += (booking.seatsBooked * price);
+    }
+    userAmountRefundMapping.put(message.userId(), totalAmount);
+    message.replyTo.tell(new DeleteBookingResponse(userAmountRefundMapping));
+    bookings.remove(message.userId());
+    return this;
+  }
+
+  private Behavior<Command> onDeleteAllBookings(DeleteAllBookings message) {
+    Map<Long, Long> userAmountRefundMapping = new HashMap<>();
+    if (bookings.isEmpty()) {
+      message.replyTo.tell(new DeleteBookingResponse(userAmountRefundMapping));
+      return this;
+    }
+
+    Long totalSeatsToRestore = 0L;
+    for (Entry<Long, List<Booking>> booking : bookings.entrySet()) {
+      Long amountRefund = 0L;
+      List<Booking> userBookings = bookings.get(booking.getKey());
+      if (userBookings.isEmpty()) continue;
+
+      for (Booking userBooking : booking.getValue()) {
+        amountRefund += (userBooking.seatsBooked * price);
+        totalSeatsToRestore += userBooking.seatsBooked();
+      }
+      userAmountRefundMapping.put(booking.getKey(), amountRefund);
+    }
+
+    seatsAvailable += totalSeatsToRestore;
+    bookings.clear();
+    message.replyTo.tell(new DeleteBookingResponse(userAmountRefundMapping));
     return this;
   }
 }
