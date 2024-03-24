@@ -353,12 +353,7 @@ public class RequestProcessingActor
       } else {
         message.replyTo.tell(
           new BookingRegistry.CreateBookingResponse(
-            new BookingRegistry.CreateBookingResponseBody(
-              response.id(),
-              response.showId(),
-              response.userId(),
-              response.seatsBooked()
-            ),
+            response,
             StatusCodes.OK,
             ""
           )

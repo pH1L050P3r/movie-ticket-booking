@@ -116,7 +116,7 @@ public class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
   ) {}
 
   public static final record CreateBookingResponse(
-    CreateBookingResponseBody body,
+    ShowActor.Booking body,
     StatusCode statusCode,
     String message
   ) {}
