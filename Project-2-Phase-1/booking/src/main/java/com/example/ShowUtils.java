@@ -33,7 +33,7 @@ public class ShowUtils {
   }
 
   public static DeleteBookingResponse deleteAllBookings(
-    List<ActorRef<ShowActor.Command>> showActors,
+    Collection<ActorRef<ShowActor.Command>> showActors,
     Duration askTimeout,
     Scheduler scheduler
   ) {

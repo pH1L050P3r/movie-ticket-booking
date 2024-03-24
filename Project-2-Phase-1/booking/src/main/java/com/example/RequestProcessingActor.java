@@ -18,6 +18,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.CompletionStage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -101,6 +102,12 @@ public class RequestProcessingActor
   )
     implements Command {}
 
+  public static final record DeleteAllBookingsProcess(
+    ActorRef<BookingRegistry.DeleteAllBookingsResponse> replyTo,
+    Map<Long, ActorRef<ShowActor.Command>> showMap
+  )
+    implements Command {}
+
   @Override
   public Receive<Command> createReceive() {
     return newReceiveBuilder()
@@ -124,6 +131,7 @@ public class RequestProcessingActor
         DeleteUserShowBookingsRequestProcess.class,
         this::onDeleteUserShowBookings
       )
+      .onMessage(DeleteAllBookingsProcess.class, this::onDeleteAllBookings)
       .build();
   }
 
@@ -447,6 +455,25 @@ public class RequestProcessingActor
         )
       );
 
+    return Behaviors.stopped();
+  }
+
+  private Behavior<Command> onDeleteAllBookings(
+    DeleteAllBookingsProcess message
+  ) {
+    DeleteBookingResponse res = ShowUtils.deleteAllBookings(
+      message.showMap().values(),
+      askTimeout,
+      scheduler
+    );
+
+    for (Entry<Long, Long> user : res.refundUserAmountMap().entrySet()) {
+      PaymentService.refund(user.getKey(), user.getValue(), http);
+    }
+
+    message
+      .replyTo()
+      .tell(new BookingRegistry.DeleteAllBookingsResponse(StatusCodes.OK, ""));
     return Behaviors.stopped();
   }
 }

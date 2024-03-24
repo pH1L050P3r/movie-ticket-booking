@@ -123,6 +123,15 @@ public class BookingRoutes {
     );
   }
 
+  private CompletionStage<BookingRegistry.DeleteAllBookingsResponse> deleteAllBookings() {
+    return AskPattern.ask(
+      bookingRegistryActor,
+      BookingRegistry.DeleteAllBookingsRequest::new,
+      askTimeout,
+      scheduler
+    );
+  }
+
   public Route showRoute() {
     return pathPrefix(
       "shows",
@@ -222,7 +231,13 @@ public class BookingRoutes {
         concat(
           pathEnd(() ->
             concat(
-              get(() -> complete("GET request received for /booking")),
+              delete(() ->
+                onSuccess(
+                  deleteAllBookings(),
+                  response ->
+                    complete(response.statusCode(), response.message())
+                )
+              ),
               post(() ->
                 entity(
                   Jackson.unmarshaller(
