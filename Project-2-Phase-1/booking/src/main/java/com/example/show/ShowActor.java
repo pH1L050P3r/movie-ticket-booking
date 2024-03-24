@@ -24,6 +24,9 @@ public class ShowActor extends AbstractBehavior<ShowActor.Command> {
   private Long seatsAvailable;
   private Long theatreId;
 
+  // for generating unique id for each booking
+  private static Long bookingNextId = 1L;
+
   private ActorRef<TheatreActor.Command> theatreActor;
   private static final Logger log = LoggerFactory.getLogger(ShowActor.class);
   private final Map<Long, List<Booking>> bookings;
@@ -120,6 +123,10 @@ public class ShowActor extends AbstractBehavior<ShowActor.Command> {
     this.bookings = new HashMap<>();
   }
 
+  private static Long getBookingId() {
+    return ShowActor.bookingNextId++;
+  }
+
   @Override
   public Receive<Command> createReceive() {
     return newReceiveBuilder()
@@ -149,7 +156,7 @@ public class ShowActor extends AbstractBehavior<ShowActor.Command> {
     } else {
       booking =
         new Booking(
-          message.userId(),
+          ShowActor.getBookingId(),
           this.id,
           message.userId(),
           message.seatsBooked()
