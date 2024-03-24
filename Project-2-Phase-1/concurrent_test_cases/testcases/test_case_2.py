@@ -12,32 +12,48 @@ debited_amount = 0
 credited_amount = 0
 
 SHOWS = [0, 1, 2, 3, 4, 5, 6 ,7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+PRICE = [0, 50, 55, 60, 65, 55, 75, 65, 45, 50, 65, 55, 65, 40, 35, 45, 75, 50, 60, 70, 40]
 INITIAL_SEATS = [0, 40,30,55,65,50,40,60,55,45,65,40,50,60,45,55,65,40,50,60,45]
+balanceDebit = {}
+balanceCredit = {}
 CREATE_SEATS = [0] * (len(SHOWS) + 1)
 DELETE_SEATS = [0] * (len(SHOWS) + 1)
 
+success_creat = 0
+failed_create = 0
 
+success_delete = 0
+failed_delete = 0
 
 
 # Thread 1: Credits into user's wallet
 def t1(user_id):
-    global SHOWS, INITIAL_SEATS, CREATE_SEATS
+    global SHOWS, INITIAL_SEATS, CREATE_SEATS, success_creat, failed_create
     for i in range(200):
         show = random.randint(1, len(SHOWS))
-        seats = random.randint(1, 20)
+        seats = random.randint(1, 5)
         payload = {"show_id":show, "user_id":user_id, "seats_booked":seats}
         response = requests.post(bookingServiceURL + "/bookings", json = payload)
         if response.status_code == 200:
+            success_creat += 1
+            balanceDebit[user_id] = balanceDebit.get(user_id, 0) + (seats * PRICE[show])
             CREATE_SEATS[show] += seats
+        else :
+            failed_create += 1
+
 
 # Thread 2: Debits from user's wallet
 def t2(user_id):
-    global SHOWS, INITIAL_SEATS, CREATE_SEATS
-    for i in range(200):
+    global SHOWS, INITIAL_SEATS, CREATE_SEATS, success_delete, failed_delete
+    for i in range(250):
         show_id = random.randint(1, 20)
         response = requests.delete(bookingServiceURL+f"/bookings/users/{user_id}/shows/{show_id}")
         if response.status_code == 200:
+            success_delete += 1
+            balanceCredit = balanceCredit.get(user_id, 0) + (show_id * PRICE[show_id])
             CREATE_SEATS[show_id] = 0 
+        else:
+            failed_delete += 1
 
 def main():
     try:
@@ -97,6 +113,7 @@ def main():
         if not test_put_wallet(user4['id'], 'credit', initial_balance, 0, response4):
             return False
         
+        userIds = [user1['id'], user2['id'], user3['id'], user4['id']]
 
         ### Parallel Execution Begins ###
         thread1 = Thread(target=t1, kwargs = {'user_id': user1['id']})
@@ -133,6 +150,13 @@ def main():
                 print_fail_message("Incorrect seats_available value getting {} but required {}".format(INITIAL_SEATS[i] - CREATE_SEATS[i], show.json()["seats_available"]))
                 return
             print_pass_message("Correct seats_available value getting {} but required {}".format(INITIAL_SEATS[i] - CREATE_SEATS[i], show.json()["seats_available"]))
+
+        print_pass_message("Total Request : " + str(450))
+        print_pass_message("Success Create : " + str(success_creat))
+        print_pass_message("Faile Create : " + str(failed_create))
+        print_pass_message("Success Delete : " + str(success_delete))
+        print_pass_message("Failed Delete" + str(failed_delete))
+
         return True
     except:
         return False
