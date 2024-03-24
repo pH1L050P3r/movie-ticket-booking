@@ -1,4 +1,4 @@
-package com.example;
+package com.example.requestprocessor;
 
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
@@ -10,8 +10,14 @@ import akka.actor.typed.javadsl.Behaviors;
 import akka.actor.typed.javadsl.Receive;
 import akka.http.javadsl.Http;
 import akka.http.javadsl.model.StatusCodes;
-import com.example.ShowActor.DeleteBookingResponse;
-import com.example.ShowActor.Show;
+import com.example.BookingRegistry;
+import com.example.services.PaymentService;
+import com.example.services.UserService;
+import com.example.show.ShowActor;
+import com.example.show.ShowActor.DeleteBookingResponse;
+import com.example.show.ShowActor.Show;
+import com.example.theatre.TheatreActor;
+import com.example.theatre.TheatreActor.Theatre;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -140,7 +146,7 @@ public class RequestProcessingActor
       .showMap()
       .get(command.showId());
     if (showActor != null) {
-      Show show = ShowUtils.getShowFromShowActor(
+      Show show = RequestProcessingUtils.getShowFromShowActor(
         showActor,
         askTimeout,
         scheduler
@@ -162,26 +168,23 @@ public class RequestProcessingActor
     return Behaviors.stopped();
   }
 
-  private Behavior<Command> onGetTheatre(GetTheatreRequestProcess command) {
-    ActorRef<TheatreActor.Command> theatreActor = command
+  private Behavior<Command> onGetTheatre(GetTheatreRequestProcess message) {
+    ActorRef<TheatreActor.Command> theatreActor = message
       .theatreMap()
-      .get(command.theatreId());
+      .get(message.theatreId());
     if (theatreActor != null) {
-      CompletionStage<TheatreActor.Theatre> completion = AskPattern.ask(
+      Theatre theatre = RequestProcessingUtils.getTheatreFromTheatreActor(
         theatreActor,
-        TheatreActor.GetTheatre::new,
         askTimeout,
         scheduler
       );
-      completion.thenAccept(response ->
-        command
-          .replyTo()
-          .tell(
-            new BookingRegistry.GetTheatreResponse(response, StatusCodes.OK, "")
-          )
-      );
+      message
+        .replyTo()
+        .tell(
+          new BookingRegistry.GetTheatreResponse(theatre, StatusCodes.OK, "")
+        );
     } else {
-      command
+      message
         .replyTo()
         .tell(
           new BookingRegistry.GetTheatreResponse(
@@ -200,22 +203,11 @@ public class RequestProcessingActor
     Collection<ActorRef<TheatreActor.Command>> theatresActors = message
       .theatreMap()
       .values();
-    List<TheatreActor.Theatre> theatres = new ArrayList<>();
-    List<CompletionStage<TheatreActor.Theatre>> completionStages = new ArrayList<>();
-
-    for (ActorRef<TheatreActor.Command> theatreActor : theatresActors) {
-      CompletionStage<TheatreActor.Theatre> completion = AskPattern.ask(
-        theatreActor,
-        TheatreActor.GetTheatre::new,
-        askTimeout,
-        scheduler
-      );
-      completionStages.add(completion);
-    }
-
-    for (CompletionStage<TheatreActor.Theatre> completion : completionStages) {
-      completion.thenAccept(theatres::add);
-    }
+    List<Theatre> theatres = RequestProcessingUtils.getTheatreListFromTheatreActorList(
+      theatresActors,
+      askTimeout,
+      scheduler
+    );
     message
       .replyTo()
       .tell(
@@ -231,23 +223,20 @@ public class RequestProcessingActor
       .theatreMap()
       .get(command.theatreId());
     if (theatreActor != null) {
-      CompletionStage<ShowActor.Shows> completion = AskPattern.ask(
+      List<Show> shows = RequestProcessingUtils.getTheatreAllShows(
         theatreActor,
-        TheatreActor.GetThreatreShows::new,
         askTimeout,
         scheduler
       );
-      completion.thenAccept(response ->
-        command
-          .replyTo()
-          .tell(
-            new BookingRegistry.GetTheatreAllShowsResponse(
-              response.shows(),
-              StatusCodes.OK,
-              ""
-            )
+      command
+        .replyTo()
+        .tell(
+          new BookingRegistry.GetTheatreAllShowsResponse(
+            shows,
+            StatusCodes.OK,
+            ""
           )
-      );
+        );
     } else {
       List<ShowActor.Show> empltyList = new ArrayList<>();
       command
@@ -319,7 +308,7 @@ public class RequestProcessingActor
       return Behaviors.stopped();
     }
 
-    Show show = ShowUtils.getShowFromShowActor(
+    Show show = RequestProcessingUtils.getShowFromShowActor(
       showActor,
       askTimeout,
       scheduler
@@ -395,7 +384,7 @@ public class RequestProcessingActor
       return Behaviors.stopped();
     }
 
-    DeleteBookingResponse response = ShowUtils.deleteAllUserBookings(
+    DeleteBookingResponse response = RequestProcessingUtils.deleteAllUserBookings(
       message.showMap().values(),
       userId,
       askTimeout,
@@ -436,7 +425,7 @@ public class RequestProcessingActor
 
     Collection<ActorRef<ShowActor.Command>> shows = new HashSet<>();
     shows.add(show);
-    DeleteBookingResponse response = ShowUtils.deleteAllUserBookings(
+    DeleteBookingResponse response = RequestProcessingUtils.deleteAllUserBookings(
       shows,
       userId,
       askTimeout,
@@ -461,14 +450,21 @@ public class RequestProcessingActor
   private Behavior<Command> onDeleteAllBookings(
     DeleteAllBookingsProcess message
   ) {
-    DeleteBookingResponse res = ShowUtils.deleteAllBookings(
+    DeleteBookingResponse res = RequestProcessingUtils.deleteAllBookings(
       message.showMap().values(),
       askTimeout,
       scheduler
     );
 
     for (Entry<Long, Long> user : res.refundUserAmountMap().entrySet()) {
-      PaymentService.refund(user.getKey(), user.getValue(), http);
+      String status = PaymentService.refund(
+        user.getKey(),
+        user.getValue(),
+        http
+      );
+      log.info(
+        "Payment refund Status UserId " + user.getKey() + " : " + status
+      );
     }
 
     message

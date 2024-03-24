@@ -7,6 +7,9 @@ import akka.actor.typed.javadsl.ActorContext;
 import akka.actor.typed.javadsl.Behaviors;
 import akka.actor.typed.javadsl.Receive;
 import akka.http.javadsl.model.StatusCode;
+import com.example.requestprocessor.RequestProcessingActor;
+import com.example.show.ShowActor;
+import com.example.theatre.TheatreActor;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
@@ -15,10 +18,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
+public class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
 
   private Map<Long, ActorRef<ShowActor.Command>> showsMap = new HashMap<>();
   private Map<Long, ActorRef<TheatreActor.Command>> theatreMap = new HashMap<>();
@@ -177,7 +181,7 @@ class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
 
   private Behavior<Command> onGetShow(GetShowRequest command) {
     getContext()
-      .spawn(RequestProcessingActor.create(), "actor")
+      .spawn(RequestProcessingActor.create(), UUID.randomUUID().toString())
       .tell(
         new RequestProcessingActor.GetShowRequestProcess(
           command.retplyTo(),
@@ -190,7 +194,7 @@ class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
 
   private Behavior<Command> onGetTheatre(GetTheatreRequest command) {
     getContext()
-      .spawn(RequestProcessingActor.create(), "processing-actor")
+      .spawn(RequestProcessingActor.create(), UUID.randomUUID().toString())
       .tell(
         new RequestProcessingActor.GetTheatreRequestProcess(
           command.replyTo(),
@@ -203,7 +207,7 @@ class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
 
   private Behavior<Command> onGetAllTheatres(GetAllTheatresRequest command) {
     getContext()
-      .spawn(RequestProcessingActor.create(), "processing-actor")
+      .spawn(RequestProcessingActor.create(), UUID.randomUUID().toString())
       .tell(
         new RequestProcessingActor.GetAllTheatresRequestProcess(
           command.replyTo(),
@@ -217,7 +221,7 @@ class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
     GetTheatreAllShowsRequest command
   ) {
     getContext()
-      .spawn(RequestProcessingActor.create(), "processing-actor")
+      .spawn(RequestProcessingActor.create(), UUID.randomUUID().toString())
       .tell(
         new RequestProcessingActor.GetTheatreAllShowsRequestProcess(
           command.replyTo(),
@@ -232,7 +236,7 @@ class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
     GetUserAllBookingsRequest command
   ) {
     getContext()
-      .spawn(RequestProcessingActor.create(), "processing-actor")
+      .spawn(RequestProcessingActor.create(), UUID.randomUUID().toString())
       .tell(
         new RequestProcessingActor.GetUserAllBookingsRequestProcess(
           command.replyTo(),
@@ -247,7 +251,7 @@ class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
     DeleteUserAllBookingsRequest command
   ) {
     getContext()
-      .spawn(RequestProcessingActor.create(), "processing-actor")
+      .spawn(RequestProcessingActor.create(), UUID.randomUUID().toString())
       .tell(
         new RequestProcessingActor.DeleteUserAllBookingsRequestProcess(
           command.replyTo(),
@@ -262,7 +266,7 @@ class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
     DeleteUserShowBookingsRequest command
   ) {
     getContext()
-      .spawn(RequestProcessingActor.create(), "processing-actor")
+      .spawn(RequestProcessingActor.create(), UUID.randomUUID().toString())
       .tell(
         new RequestProcessingActor.DeleteUserShowBookingsRequestProcess(
           command.replyTo(),
@@ -278,7 +282,7 @@ class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
     DeleteAllBookingsRequest command
   ) {
     getContext()
-      .spawn(RequestProcessingActor.create(), "processing-actor")
+      .spawn(RequestProcessingActor.create(), UUID.randomUUID().toString())
       .tell(
         new RequestProcessingActor.DeleteAllBookingsProcess(
           command.replyTo(),
@@ -290,7 +294,7 @@ class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
 
   private Behavior<Command> onCreateBooking(CreateBookingRequest message) {
     getContext()
-      .spawn(RequestProcessingActor.create(), "processing-actor")
+      .spawn(RequestProcessingActor.create(), UUID.randomUUID().toString())
       .tell(
         new RequestProcessingActor.CreateBookingRequestProcess(
           message.replyTo(),
@@ -353,7 +357,7 @@ class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
         showsMap.put(id, showActor);
       }
     } catch (Exception e) {
-      System.err.println("Error loading data from CSV: " + e.getMessage());
+      log.error("Error loading data from CSV: " + e.getMessage(), e);
     }
     log.info("Data Loaded Successfully");
   }

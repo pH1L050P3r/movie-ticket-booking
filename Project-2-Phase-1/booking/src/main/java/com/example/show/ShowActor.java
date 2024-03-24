@@ -1,4 +1,4 @@
-package com.example;
+package com.example.show;
 
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
@@ -6,6 +6,8 @@ import akka.actor.typed.javadsl.AbstractBehavior;
 import akka.actor.typed.javadsl.ActorContext;
 import akka.actor.typed.javadsl.Behaviors;
 import akka.actor.typed.javadsl.Receive;
+import com.example.theatre.TheatreActor;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -21,11 +23,12 @@ public class ShowActor extends AbstractBehavior<ShowActor.Command> {
   private Long price;
   private Long seatsAvailable;
   private Long theatreId;
+
   private ActorRef<TheatreActor.Command> theatreActor;
   private static final Logger log = LoggerFactory.getLogger(ShowActor.class);
   private final Map<Long, List<Booking>> bookings;
 
-  sealed interface Command {}
+  public interface Command {}
 
   public static final record GetShow(ActorRef<Show> replyTo)
     implements Command {}
@@ -62,17 +65,17 @@ public class ShowActor extends AbstractBehavior<ShowActor.Command> {
     Long id,
     String title,
     Long price,
-    Long theatreId,
-    Long seatsAvailable
+    @JsonProperty("theatre_id") Long theatreId,
+    @JsonProperty("seats_available") Long seatsAvailable
   ) {}
 
   public static final record Shows(List<Show> shows) {}
 
   public static final record Booking(
     Long id,
-    Long showId,
-    Long userId,
-    Long seatsBooked
+    @JsonProperty("show_id") Long showId,
+    @JsonProperty("user_id") Long userId,
+    @JsonProperty("seats_booked") Long seatsBooked
   ) {}
 
   public static final record Bookings(List<Booking> bookings) {}
@@ -176,12 +179,15 @@ public class ShowActor extends AbstractBehavior<ShowActor.Command> {
     }
 
     Long totalAmount = 0L;
+    Long totalSeatsToRestore = 0L;
     for (Booking booking : userBookings) {
       totalAmount += (booking.seatsBooked * price);
+      totalSeatsToRestore += booking.seatsBooked();
     }
     userAmountRefundMapping.put(message.userId(), totalAmount);
     message.replyTo.tell(new DeleteBookingResponse(userAmountRefundMapping));
     bookings.remove(message.userId());
+    seatsAvailable += totalSeatsToRestore;
     return this;
   }
 

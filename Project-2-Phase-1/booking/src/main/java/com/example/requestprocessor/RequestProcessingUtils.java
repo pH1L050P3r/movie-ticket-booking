@@ -1,10 +1,13 @@
-package com.example;
+package com.example.requestprocessor;
 
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.Scheduler;
 import akka.actor.typed.javadsl.AskPattern;
-import com.example.ShowActor.DeleteBookingResponse;
-import com.example.ShowActor.Show;
+import com.example.show.ShowActor;
+import com.example.show.ShowActor.DeleteBookingResponse;
+import com.example.show.ShowActor.Show;
+import com.example.theatre.TheatreActor;
+import com.example.theatre.TheatreActor.Theatre;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -14,9 +17,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletionStage;
 
-public class ShowUtils {
+public class RequestProcessingUtils {
 
-  private ShowUtils() {}
+  private RequestProcessingUtils() {}
 
   public static Show getShowFromShowActor(
     ActorRef<ShowActor.Command> showActor,
@@ -30,6 +33,58 @@ public class ShowUtils {
       scheduler
     );
     return completion.toCompletableFuture().join();
+  }
+
+  public static Theatre getTheatreFromTheatreActor(
+    ActorRef<TheatreActor.Command> theatreActor,
+    Duration askTimeout,
+    Scheduler scheduler
+  ) {
+    CompletionStage<TheatreActor.Theatre> completion = AskPattern.ask(
+      theatreActor,
+      TheatreActor.GetTheatre::new,
+      askTimeout,
+      scheduler
+    );
+    return completion.toCompletableFuture().join();
+  }
+
+  public static List<Theatre> getTheatreListFromTheatreActorList(
+    Collection<ActorRef<TheatreActor.Command>> theatresActors,
+    Duration askTimeout,
+    Scheduler scheduler
+  ) {
+    List<TheatreActor.Theatre> theatres = new ArrayList<>();
+    List<CompletionStage<TheatreActor.Theatre>> completionStages = new ArrayList<>();
+
+    for (ActorRef<TheatreActor.Command> theatreActor : theatresActors) {
+      CompletionStage<TheatreActor.Theatre> completion = AskPattern.ask(
+        theatreActor,
+        TheatreActor.GetTheatre::new,
+        askTimeout,
+        scheduler
+      );
+      completionStages.add(completion);
+    }
+
+    for (CompletionStage<TheatreActor.Theatre> completion : completionStages) {
+      completion.thenAccept(theatres::add);
+    }
+    return theatres;
+  }
+
+  public static List<Show> getTheatreAllShows(
+    ActorRef<TheatreActor.Command> theatreActor,
+    Duration askTimeout,
+    Scheduler scheduler
+  ) {
+    CompletionStage<ShowActor.Shows> completion = AskPattern.ask(
+      theatreActor,
+      TheatreActor.GetThreatreShows::new,
+      askTimeout,
+      scheduler
+    );
+    return completion.toCompletableFuture().join().shows();
   }
 
   public static DeleteBookingResponse deleteAllBookings(

@@ -1,4 +1,4 @@
-package com.example;
+package com.example.theatre;
 
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
@@ -8,6 +8,7 @@ import akka.actor.typed.javadsl.ActorContext;
 import akka.actor.typed.javadsl.AskPattern;
 import akka.actor.typed.javadsl.Behaviors;
 import akka.actor.typed.javadsl.Receive;
+import com.example.show.ShowActor;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -23,13 +24,11 @@ public class TheatreActor extends AbstractBehavior<TheatreActor.Command> {
   private String name;
   private String location;
   private Map<Long, ActorRef<ShowActor.Command>> shows;
-  private static final Logger log = LoggerFactory.getLogger(
-    BookingRegistry.class
-  );
+  private static final Logger log = LoggerFactory.getLogger(TheatreActor.class);
   private final Duration askTimeout;
   private final Scheduler scheduler;
 
-  sealed interface Command {}
+  public interface Command {}
 
   public static final record GetTheatre(ActorRef<Theatre> replyTo)
     implements Command {}

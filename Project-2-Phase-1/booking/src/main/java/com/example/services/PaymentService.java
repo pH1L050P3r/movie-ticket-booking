@@ -1,4 +1,4 @@
-package com.example;
+package com.example.services;
 
 import akka.http.javadsl.Http;
 import akka.http.javadsl.model.ContentTypes;
