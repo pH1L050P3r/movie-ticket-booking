@@ -66,7 +66,12 @@ public class TheatreActor extends AbstractBehavior<TheatreActor.Command> {
     this.id = id;
     this.name = name;
     this.location = location;
-    this.askTimeout = Duration.ofSeconds(5);
+    this.askTimeout =
+      context
+        .getSystem()
+        .settings()
+        .config()
+        .getDuration("my-app.routes.ask-timeout");
     this.scheduler = getContext().getSystem().scheduler();
     this.shows = new HashMap<>();
   }
