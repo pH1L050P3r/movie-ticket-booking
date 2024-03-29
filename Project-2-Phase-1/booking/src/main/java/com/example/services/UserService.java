@@ -20,11 +20,16 @@ public class UserService {
     Integer timeOut = PAYMENT_MAX_RETRY;
     String url =
       "http://host.docker.internal:8080/users/" + Long.toString(userId);
-    while (timeOut-- != 0) {
-      HttpRequest request = HttpRequest.GET(url);
-      CompletionStage<HttpResponse> completion = http.singleRequest(request);
-      HttpResponse response = completion.toCompletableFuture().join();
-      if (response.status() == StatusCodes.OK) return true;
+
+    try {
+      while (timeOut-- != 0) {
+        HttpRequest request = HttpRequest.GET(url);
+        CompletionStage<HttpResponse> completion = http.singleRequest(request);
+        HttpResponse response = completion.toCompletableFuture().join();
+        if (response.status() == StatusCodes.OK) return true;
+      }
+    } catch (Exception e) {
+      return false;
     }
     return false;
   }

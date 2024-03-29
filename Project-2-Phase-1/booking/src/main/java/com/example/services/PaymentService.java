@@ -45,13 +45,17 @@ public class PaymentService {
       e.printStackTrace();
       return "FAIL";
     }
-    while (timeOut-- != 0) {
-      HttpRequest request = HttpRequest
-        .PUT(url)
-        .withEntity(ContentTypes.APPLICATION_JSON, jsonData);
-      CompletionStage<HttpResponse> completion = http.singleRequest(request);
-      HttpResponse response = completion.toCompletableFuture().join();
-      if (response.status() == StatusCodes.OK) return "SUCCESS";
+    try {
+      while (timeOut-- != 0) {
+        HttpRequest request = HttpRequest
+          .PUT(url)
+          .withEntity(ContentTypes.APPLICATION_JSON, jsonData);
+        CompletionStage<HttpResponse> completion = http.singleRequest(request);
+        HttpResponse response = completion.toCompletableFuture().join();
+        if (response.status() == StatusCodes.OK) return "SUCCESS";
+      }
+    } catch (Exception e) {
+      return "FAIL";
     }
     return "FAIL";
   }
