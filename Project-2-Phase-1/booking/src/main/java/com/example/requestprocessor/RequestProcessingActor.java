@@ -45,12 +45,17 @@ public class RequestProcessingActor
 
   private RequestProcessingActor(ActorContext<Command> context) {
     super(context);
-    this.askTimeout = Duration.ofSeconds(30);
+    this.askTimeout =
+      context
+        .getSystem()
+        .settings()
+        .config()
+        .getDuration("my-app.routes.ask-timeout");
     this.scheduler = getContext().getSystem().scheduler();
     this.http = Http.get(getContext().getSystem());
   }
 
-  sealed interface Command {}
+  public interface Command {}
 
   public static final record GetShowRequestProcess(
     ActorRef<BookingRegistry.GetShowResponse> retplyTo,
@@ -165,7 +170,7 @@ public class RequestProcessingActor
           )
         );
     }
-    return Behaviors.stopped();
+    return this;
   }
 
   private Behavior<Command> onGetTheatre(GetTheatreRequestProcess message) {
@@ -194,7 +199,7 @@ public class RequestProcessingActor
           )
         );
     }
-    return Behaviors.stopped();
+    return this;
   }
 
   private Behavior<Command> onGetAllTheatres(
@@ -213,7 +218,7 @@ public class RequestProcessingActor
       .tell(
         new BookingRegistry.GetAllTheatresResponse(theatres, StatusCodes.OK, "")
       );
-    return Behaviors.stopped();
+    return this;
   }
 
   private Behavior<Command> onGetTheatreAllShows(
@@ -249,7 +254,7 @@ public class RequestProcessingActor
           )
         );
     }
-    return Behaviors.stopped();
+    return this;
   }
 
   private Behavior<Command> onGetUserAllBookings(
@@ -284,7 +289,7 @@ public class RequestProcessingActor
           ""
         )
       );
-    return Behaviors.stopped();
+    return this;
   }
 
   private Behavior<Command> onCreateBooking(
@@ -305,7 +310,7 @@ public class RequestProcessingActor
             "User or Show does not exists"
           )
         );
-      return Behaviors.stopped();
+      return this;
     }
 
     Show show = RequestProcessingUtils.getShowFromShowActor(
@@ -328,7 +333,7 @@ public class RequestProcessingActor
             "Payment failed"
           )
         );
-      return Behaviors.stopped();
+      return this;
     }
 
     // create booking
@@ -360,7 +365,7 @@ public class RequestProcessingActor
         );
       }
     });
-    return Behaviors.stopped();
+    return this;
   }
 
   private Behavior<Command> onDeleteUserAllBookings(
@@ -376,7 +381,7 @@ public class RequestProcessingActor
             "User does not exists"
           )
         );
-      return Behaviors.stopped();
+      return this;
     }
 
     DeleteBookingResponse response = RequestProcessingUtils.deleteAllUserBookings(
@@ -398,7 +403,7 @@ public class RequestProcessingActor
         )
       );
 
-    return Behaviors.stopped();
+    return this;
   }
 
   private Behavior<Command> onDeleteUserShowBookings(
@@ -415,7 +420,7 @@ public class RequestProcessingActor
             "User or Show does not exists"
           )
         );
-      return Behaviors.stopped();
+      return this;
     }
 
     Collection<ActorRef<ShowActor.Command>> shows = new HashSet<>();
@@ -439,7 +444,7 @@ public class RequestProcessingActor
         )
       );
 
-    return Behaviors.stopped();
+    return this;
   }
 
   private Behavior<Command> onDeleteAllBookings(
@@ -465,6 +470,6 @@ public class RequestProcessingActor
     message
       .replyTo()
       .tell(new BookingRegistry.DeleteAllBookingsResponse(StatusCodes.OK, ""));
-    return Behaviors.stopped();
+    return this;
   }
 }
