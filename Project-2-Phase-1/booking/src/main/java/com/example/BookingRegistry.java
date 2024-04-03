@@ -38,7 +38,7 @@ public class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
   sealed interface Command {}
 
   public static final record GetShowRequest(
-    ActorRef<GetShowResponse> retplyTo,
+    ActorRef<GetShowResponse> replyTo,
     Long id
   )
     implements Command {}
@@ -56,7 +56,7 @@ public class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
 
   public static final record GetTheatreAllShowsRequest(
     ActorRef<GetTheatreAllShowsResponse> replyTo,
-    Long threatreId
+    Long theatreId
   )
     implements Command {}
 
@@ -196,7 +196,7 @@ public class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
   private Behavior<Command> onGetShow(GetShowRequest command) {
     requestProcessor.tell(
       new RequestProcessingActor.GetShowRequestProcess(
-        command.retplyTo(),
+        command.replyTo(),
         command.id(),
         Collections.unmodifiableMap(showsMap)
       )
@@ -231,7 +231,7 @@ public class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
     requestProcessor.tell(
       new RequestProcessingActor.GetTheatreAllShowsRequestProcess(
         command.replyTo(),
-        command.threatreId(),
+        command.theatreId(),
         Collections.unmodifiableMap(theatreMap)
       )
     );

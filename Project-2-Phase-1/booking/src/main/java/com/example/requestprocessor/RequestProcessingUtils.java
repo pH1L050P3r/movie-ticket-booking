@@ -80,7 +80,7 @@ public class RequestProcessingUtils {
   ) {
     CompletionStage<ShowActor.Shows> completion = AskPattern.ask(
       theatreActor,
-      TheatreActor.GetThreatreShows::new,
+      TheatreActor.GetTheatreShows::new,
       askTimeout,
       scheduler
     );

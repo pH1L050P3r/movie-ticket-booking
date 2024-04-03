@@ -58,7 +58,7 @@ public class RequestProcessingActor
   public interface Command {}
 
   public static final record GetShowRequestProcess(
-    ActorRef<BookingRegistry.GetShowResponse> retplyTo,
+    ActorRef<BookingRegistry.GetShowResponse> replyTo,
     Long showId,
     Map<Long, ActorRef<ShowActor.Command>> showMap
   )
@@ -157,11 +157,11 @@ public class RequestProcessingActor
         scheduler
       );
       command
-        .retplyTo()
+        .replyTo()
         .tell(new BookingRegistry.GetShowResponse(show, StatusCodes.OK, ""));
     } else {
       command
-        .retplyTo()
+        .replyTo()
         .tell(
           new BookingRegistry.GetShowResponse(
             null,
@@ -243,12 +243,12 @@ public class RequestProcessingActor
           )
         );
     } else {
-      List<ShowActor.Show> empltyList = new ArrayList<>();
+      List<ShowActor.Show> emptyList = new ArrayList<>();
       command
         .replyTo()
         .tell(
           new BookingRegistry.GetTheatreAllShowsResponse(
-            empltyList,
+            emptyList,
             StatusCodes.NOT_FOUND,
             "Theatre not exists"
           )
