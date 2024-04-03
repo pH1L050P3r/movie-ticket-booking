@@ -33,7 +33,7 @@ public class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
   );
   private final PoolRouter<RequestProcessingActor.Command> pool;
   private final ActorRef<RequestProcessingActor.Command> requestProcessor;
-  private final Integer SIZE_OF_THREAD_POOL = 512;
+  private static final Integer SIZE_OF_THREAD_POOL = 512;
 
   sealed interface Command {}
 
@@ -160,16 +160,21 @@ public class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
 
   private BookingRegistry(ActorContext<BookingRegistry.Command> context) {
     super(context);
+    loadActorsFromFile(context);
     pool =
       Routers.pool(
         SIZE_OF_THREAD_POOL,
         // make sure the workers are restarted if they fail
         Behaviors
-          .supervise(RequestProcessingActor.create())
+          .supervise(
+            RequestProcessingActor.create(
+              Collections.unmodifiableMap(showsMap),
+              Collections.unmodifiableMap(theatreMap)
+            )
+          )
           .onFailure(SupervisorStrategy.restart())
       );
     requestProcessor = context.spawn(pool, "worker-pool");
-    loadActorsFromFile(context);
   }
 
   @Override
@@ -197,8 +202,7 @@ public class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
     requestProcessor.tell(
       new RequestProcessingActor.GetShowRequestProcess(
         command.replyTo(),
-        command.id(),
-        Collections.unmodifiableMap(showsMap)
+        command.id()
       )
     );
     return this;
@@ -208,8 +212,7 @@ public class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
     requestProcessor.tell(
       new RequestProcessingActor.GetTheatreRequestProcess(
         command.replyTo(),
-        command.id(),
-        Collections.unmodifiableMap(theatreMap)
+        command.id()
       )
     );
     return this;
@@ -217,10 +220,7 @@ public class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
 
   private Behavior<Command> onGetAllTheatres(GetAllTheatresRequest command) {
     requestProcessor.tell(
-      new RequestProcessingActor.GetAllTheatresRequestProcess(
-        command.replyTo(),
-        Collections.unmodifiableMap(theatreMap)
-      )
+      new RequestProcessingActor.GetAllTheatresRequestProcess(command.replyTo())
     );
     return this;
   }
@@ -231,8 +231,7 @@ public class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
     requestProcessor.tell(
       new RequestProcessingActor.GetTheatreAllShowsRequestProcess(
         command.replyTo(),
-        command.theatreId(),
-        Collections.unmodifiableMap(theatreMap)
+        command.theatreId()
       )
     );
     return this;
@@ -244,8 +243,7 @@ public class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
     requestProcessor.tell(
       new RequestProcessingActor.GetUserAllBookingsRequestProcess(
         command.replyTo(),
-        command.userId(),
-        Collections.unmodifiableMap(showsMap)
+        command.userId()
       )
     );
     return this;
@@ -257,7 +255,6 @@ public class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
     requestProcessor.tell(
       new RequestProcessingActor.DeleteUserAllBookingsRequestProcess(
         command.replyTo(),
-        Collections.unmodifiableMap(showsMap),
         command.userId()
       )
     );
@@ -270,7 +267,6 @@ public class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
     requestProcessor.tell(
       new RequestProcessingActor.DeleteUserShowBookingsRequestProcess(
         command.replyTo(),
-        Collections.unmodifiableMap(showsMap),
         command.userId(),
         command.showId()
       )
@@ -282,10 +278,7 @@ public class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
     DeleteAllBookingsRequest command
   ) {
     requestProcessor.tell(
-      new RequestProcessingActor.DeleteAllBookingsProcess(
-        command.replyTo(),
-        Collections.unmodifiableMap(showsMap)
-      )
+      new RequestProcessingActor.DeleteAllBookingsProcess(command.replyTo())
     );
     return this;
   }
@@ -294,7 +287,6 @@ public class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
     requestProcessor.tell(
       new RequestProcessingActor.CreateBookingRequestProcess(
         message.replyTo(),
-        Collections.unmodifiableMap(showsMap),
         message.requestBody()
       )
     );

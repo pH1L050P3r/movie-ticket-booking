@@ -35,16 +35,29 @@ public class RequestProcessingActor
   private final Duration askTimeout;
   private final Scheduler scheduler;
   private final Http http;
+  private final Map<Long, ActorRef<ShowActor.Command>> showMap;
+  private final Map<Long, ActorRef<TheatreActor.Command>> theatreMap;
   private static final Logger log = LoggerFactory.getLogger(
     RequestProcessingActor.class
   );
 
-  public static Behavior<Command> create() {
-    return Behaviors.setup(RequestProcessingActor::new);
+  public static Behavior<Command> create(
+    Map<Long, ActorRef<ShowActor.Command>> showMap,
+    Map<Long, ActorRef<TheatreActor.Command>> theatreMap
+  ) {
+    return Behaviors.setup(context ->
+      new RequestProcessingActor(context, showMap, theatreMap)
+    );
   }
 
-  private RequestProcessingActor(ActorContext<Command> context) {
+  private RequestProcessingActor(
+    ActorContext<Command> context,
+    Map<Long, ActorRef<ShowActor.Command>> showMap,
+    Map<Long, ActorRef<TheatreActor.Command>> theatreMap
+  ) {
     super(context);
+    this.showMap = showMap;
+    this.theatreMap = theatreMap;
     this.askTimeout =
       context
         .getSystem()
@@ -59,63 +72,54 @@ public class RequestProcessingActor
 
   public static final record GetShowRequestProcess(
     ActorRef<BookingRegistry.GetShowResponse> replyTo,
-    Long showId,
-    Map<Long, ActorRef<ShowActor.Command>> showMap
+    Long showId
   )
     implements Command {}
 
   public static final record GetTheatreRequestProcess(
     ActorRef<BookingRegistry.GetTheatreResponse> replyTo,
-    Long theatreId,
-    Map<Long, ActorRef<TheatreActor.Command>> theatreMap
+    Long theatreId
   )
     implements Command {}
 
   public static final record GetAllTheatresRequestProcess(
-    ActorRef<BookingRegistry.GetAllTheatresResponse> replyTo,
-    Map<Long, ActorRef<TheatreActor.Command>> theatreMap
+    ActorRef<BookingRegistry.GetAllTheatresResponse> replyTo
   )
     implements Command {}
 
   public static final record GetTheatreAllShowsRequestProcess(
     ActorRef<BookingRegistry.GetTheatreAllShowsResponse> replyTo,
-    Long theatreId,
-    Map<Long, ActorRef<TheatreActor.Command>> theatreMap
+    Long theatreId
   )
     implements Command {}
 
   public static final record CreateBookingRequestProcess(
     ActorRef<BookingRegistry.CreateBookingResponse> replyTo,
-    Map<Long, ActorRef<ShowActor.Command>> showMap,
     BookingRegistry.CreateBookingRequestBody requestBody
   )
     implements Command {}
 
   public static final record GetUserAllBookingsRequestProcess(
     ActorRef<BookingRegistry.GetUserAllBookingsResponse> replyTo,
-    Long userId,
-    Map<Long, ActorRef<ShowActor.Command>> showMap
+    Long userId
   )
     implements Command {}
 
   public static final record DeleteUserAllBookingsRequestProcess(
     ActorRef<BookingRegistry.DeleteUserAllBookingsResponse> replyTo,
-    Map<Long, ActorRef<ShowActor.Command>> showMap,
     Long userId
   )
     implements Command {}
 
   public static final record DeleteUserShowBookingsRequestProcess(
     ActorRef<BookingRegistry.DeleteUserShowBookingsResponse> replyTo,
-    Map<Long, ActorRef<ShowActor.Command>> showMap,
     Long userId,
     Long showId
   )
     implements Command {}
 
   public static final record DeleteAllBookingsProcess(
-    ActorRef<BookingRegistry.DeleteAllBookingsResponse> replyTo,
-    Map<Long, ActorRef<ShowActor.Command>> showMap
+    ActorRef<BookingRegistry.DeleteAllBookingsResponse> replyTo
   )
     implements Command {}
 
@@ -147,9 +151,7 @@ public class RequestProcessingActor
   }
 
   private Behavior<Command> onGetShow(GetShowRequestProcess command) {
-    ActorRef<ShowActor.Command> showActor = command
-      .showMap()
-      .get(command.showId());
+    ActorRef<ShowActor.Command> showActor = showMap.get(command.showId());
     if (showActor != null) {
       Show show = RequestProcessingUtils.getShowFromShowActor(
         showActor,
@@ -174,9 +176,9 @@ public class RequestProcessingActor
   }
 
   private Behavior<Command> onGetTheatre(GetTheatreRequestProcess message) {
-    ActorRef<TheatreActor.Command> theatreActor = message
-      .theatreMap()
-      .get(message.theatreId());
+    ActorRef<TheatreActor.Command> theatreActor = theatreMap.get(
+      message.theatreId()
+    );
     if (theatreActor != null) {
       Theatre theatre = RequestProcessingUtils.getTheatreFromTheatreActor(
         theatreActor,
@@ -205,9 +207,7 @@ public class RequestProcessingActor
   private Behavior<Command> onGetAllTheatres(
     GetAllTheatresRequestProcess message
   ) {
-    Collection<ActorRef<TheatreActor.Command>> theatresActors = message
-      .theatreMap()
-      .values();
+    Collection<ActorRef<TheatreActor.Command>> theatresActors = theatreMap.values();
     List<Theatre> theatres = RequestProcessingUtils.getTheatreListFromTheatreActorList(
       theatresActors,
       askTimeout,
@@ -222,18 +222,18 @@ public class RequestProcessingActor
   }
 
   private Behavior<Command> onGetTheatreAllShows(
-    GetTheatreAllShowsRequestProcess command
+    GetTheatreAllShowsRequestProcess message
   ) {
-    ActorRef<TheatreActor.Command> theatreActor = command
-      .theatreMap()
-      .get(command.theatreId());
+    ActorRef<TheatreActor.Command> theatreActor = theatreMap.get(
+      message.theatreId()
+    );
     if (theatreActor != null) {
       List<Show> shows = RequestProcessingUtils.getTheatreAllShows(
         theatreActor,
         askTimeout,
         scheduler
       );
-      command
+      message
         .replyTo()
         .tell(
           new BookingRegistry.GetTheatreAllShowsResponse(
@@ -244,7 +244,7 @@ public class RequestProcessingActor
         );
     } else {
       List<ShowActor.Show> emptyList = new ArrayList<>();
-      command
+      message
         .replyTo()
         .tell(
           new BookingRegistry.GetTheatreAllShowsResponse(
@@ -264,7 +264,7 @@ public class RequestProcessingActor
     List<ShowActor.Booking> bookings = new ArrayList<>();
     List<CompletionStage<ShowActor.Bookings>> completionStages = new ArrayList<>();
 
-    for (ActorRef<ShowActor.Command> showActor : message.showMap().values()) {
+    for (ActorRef<ShowActor.Command> showActor : showMap.values()) {
       CompletionStage<ShowActor.Bookings> completion = AskPattern.ask(
         showActor,
         ref -> new ShowActor.GetUserBookings(ref, userId),
@@ -299,8 +299,9 @@ public class RequestProcessingActor
     Long userId = message.requestBody.userId();
     Long seatsBooked = message.requestBody.seatsBooked();
 
-    ActorRef<ShowActor.Command> showActor = message.showMap().get(showId);
-    if (showActor == null || !UserService.isUserExist(userId, http)) {
+    ActorRef<ShowActor.Command> showActor = showMap.get(showId);
+
+    if (showActor == null/* || !UserService.isUserExist(userId, http)*/) {
       message
         .replyTo()
         .tell(
@@ -330,7 +331,7 @@ public class RequestProcessingActor
           new BookingRegistry.CreateBookingResponse(
             null,
             StatusCodes.BAD_REQUEST,
-            "Payment failed"
+            "Payment failed or Seats not available"
           )
         );
       return this;
@@ -355,6 +356,7 @@ public class RequestProcessingActor
               "Seats not Available"
             )
           );
+        log.info("Seats : USER ID :" + userId.toString());
       } else {
         message.replyTo.tell(
           new BookingRegistry.CreateBookingResponse(
@@ -385,7 +387,7 @@ public class RequestProcessingActor
     }
 
     DeleteBookingResponse response = RequestProcessingUtils.deleteAllUserBookings(
-      message.showMap().values(),
+      showMap.values(),
       userId,
       askTimeout,
       scheduler
@@ -410,7 +412,7 @@ public class RequestProcessingActor
     DeleteUserShowBookingsRequestProcess message
   ) {
     Long userId = message.userId();
-    ActorRef<ShowActor.Command> show = message.showMap().get(message.showId());
+    ActorRef<ShowActor.Command> show = showMap.get(message.showId());
     if (show == null || !UserService.isUserExist(userId, http)) {
       message
         .replyTo()
@@ -451,7 +453,7 @@ public class RequestProcessingActor
     DeleteAllBookingsProcess message
   ) {
     DeleteBookingResponse res = RequestProcessingUtils.deleteAllBookings(
-      message.showMap().values(),
+      showMap.values(),
       askTimeout,
       scheduler
     );
