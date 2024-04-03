@@ -2,10 +2,13 @@ package com.example;
 
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
+import akka.actor.typed.SupervisorStrategy;
 import akka.actor.typed.javadsl.AbstractBehavior;
 import akka.actor.typed.javadsl.ActorContext;
 import akka.actor.typed.javadsl.Behaviors;
+import akka.actor.typed.javadsl.PoolRouter;
 import akka.actor.typed.javadsl.Receive;
+import akka.actor.typed.javadsl.Routers;
 import akka.http.javadsl.model.StatusCode;
 import com.example.requestprocessor.RequestProcessingActor;
 import com.example.show.ShowActor;
@@ -18,7 +21,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,11 +31,14 @@ public class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
   private static final Logger log = LoggerFactory.getLogger(
     BookingRegistry.class
   );
+  private final PoolRouter<RequestProcessingActor.Command> pool;
+  private final ActorRef<RequestProcessingActor.Command> requestProcessor;
+  private static final Integer SIZE_OF_THREAD_POOL = 512;
 
   sealed interface Command {}
 
   public static final record GetShowRequest(
-    ActorRef<GetShowResponse> retplyTo,
+    ActorRef<GetShowResponse> replyTo,
     Long id
   )
     implements Command {}
@@ -51,7 +56,7 @@ public class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
 
   public static final record GetTheatreAllShowsRequest(
     ActorRef<GetTheatreAllShowsResponse> replyTo,
-    Long threatreId
+    Long theatreId
   )
     implements Command {}
 
@@ -156,6 +161,20 @@ public class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
   private BookingRegistry(ActorContext<BookingRegistry.Command> context) {
     super(context);
     loadActorsFromFile(context);
+    pool =
+      Routers.pool(
+        SIZE_OF_THREAD_POOL,
+        // make sure the workers are restarted if they fail
+        Behaviors
+          .supervise(
+            RequestProcessingActor.create(
+              Collections.unmodifiableMap(showsMap),
+              Collections.unmodifiableMap(theatreMap)
+            )
+          )
+          .onFailure(SupervisorStrategy.restart())
+      );
+    requestProcessor = context.spawn(pool, "worker-pool");
   }
 
   @Override
@@ -180,128 +199,97 @@ public class BookingRegistry extends AbstractBehavior<BookingRegistry.Command> {
   }
 
   private Behavior<Command> onGetShow(GetShowRequest command) {
-    getContext()
-      .spawn(RequestProcessingActor.create(), UUID.randomUUID().toString())
-      .tell(
-        new RequestProcessingActor.GetShowRequestProcess(
-          command.retplyTo(),
-          command.id(),
-          Collections.unmodifiableMap(showsMap)
-        )
-      );
+    requestProcessor.tell(
+      new RequestProcessingActor.GetShowRequestProcess(
+        command.replyTo(),
+        command.id()
+      )
+    );
     return this;
   }
 
   private Behavior<Command> onGetTheatre(GetTheatreRequest command) {
-    getContext()
-      .spawn(RequestProcessingActor.create(), UUID.randomUUID().toString())
-      .tell(
-        new RequestProcessingActor.GetTheatreRequestProcess(
-          command.replyTo(),
-          command.id(),
-          Collections.unmodifiableMap(theatreMap)
-        )
-      );
+    requestProcessor.tell(
+      new RequestProcessingActor.GetTheatreRequestProcess(
+        command.replyTo(),
+        command.id()
+      )
+    );
     return this;
   }
 
   private Behavior<Command> onGetAllTheatres(GetAllTheatresRequest command) {
-    getContext()
-      .spawn(RequestProcessingActor.create(), UUID.randomUUID().toString())
-      .tell(
-        new RequestProcessingActor.GetAllTheatresRequestProcess(
-          command.replyTo(),
-          Collections.unmodifiableMap(theatreMap)
-        )
-      );
+    requestProcessor.tell(
+      new RequestProcessingActor.GetAllTheatresRequestProcess(command.replyTo())
+    );
     return this;
   }
 
   private Behavior<Command> onGetTheatreAllShows(
     GetTheatreAllShowsRequest command
   ) {
-    getContext()
-      .spawn(RequestProcessingActor.create(), UUID.randomUUID().toString())
-      .tell(
-        new RequestProcessingActor.GetTheatreAllShowsRequestProcess(
-          command.replyTo(),
-          command.threatreId(),
-          Collections.unmodifiableMap(theatreMap)
-        )
-      );
+    requestProcessor.tell(
+      new RequestProcessingActor.GetTheatreAllShowsRequestProcess(
+        command.replyTo(),
+        command.theatreId()
+      )
+    );
     return this;
   }
 
   private Behavior<Command> onGetUserAllBookings(
     GetUserAllBookingsRequest command
   ) {
-    getContext()
-      .spawn(RequestProcessingActor.create(), UUID.randomUUID().toString())
-      .tell(
-        new RequestProcessingActor.GetUserAllBookingsRequestProcess(
-          command.replyTo(),
-          command.userId(),
-          Collections.unmodifiableMap(showsMap)
-        )
-      );
+    requestProcessor.tell(
+      new RequestProcessingActor.GetUserAllBookingsRequestProcess(
+        command.replyTo(),
+        command.userId()
+      )
+    );
     return this;
   }
 
   private Behavior<Command> onDeleteUserAllBookings(
     DeleteUserAllBookingsRequest command
   ) {
-    getContext()
-      .spawn(RequestProcessingActor.create(), UUID.randomUUID().toString())
-      .tell(
-        new RequestProcessingActor.DeleteUserAllBookingsRequestProcess(
-          command.replyTo(),
-          Collections.unmodifiableMap(showsMap),
-          command.userId()
-        )
-      );
+    requestProcessor.tell(
+      new RequestProcessingActor.DeleteUserAllBookingsRequestProcess(
+        command.replyTo(),
+        command.userId()
+      )
+    );
     return this;
   }
 
   private Behavior<Command> onDeleteUserShowBookings(
     DeleteUserShowBookingsRequest command
   ) {
-    getContext()
-      .spawn(RequestProcessingActor.create(), UUID.randomUUID().toString())
-      .tell(
-        new RequestProcessingActor.DeleteUserShowBookingsRequestProcess(
-          command.replyTo(),
-          Collections.unmodifiableMap(showsMap),
-          command.userId(),
-          command.showId()
-        )
-      );
+    requestProcessor.tell(
+      new RequestProcessingActor.DeleteUserShowBookingsRequestProcess(
+        command.replyTo(),
+        command.userId(),
+        command.showId()
+      )
+    );
     return this;
   }
 
   private Behavior<Command> onDeleteAllBookings(
     DeleteAllBookingsRequest command
   ) {
-    getContext()
-      .spawn(RequestProcessingActor.create(), UUID.randomUUID().toString())
-      .tell(
-        new RequestProcessingActor.DeleteAllBookingsProcess(
-          command.replyTo(),
-          Collections.unmodifiableMap(showsMap)
-        )
-      );
+    requestProcessor.tell(
+      new RequestProcessingActor.DeleteAllBookingsProcess(command.replyTo())
+    );
     return this;
   }
 
   private Behavior<Command> onCreateBooking(CreateBookingRequest message) {
-    getContext()
-      .spawn(RequestProcessingActor.create(), UUID.randomUUID().toString())
-      .tell(
-        new RequestProcessingActor.CreateBookingRequestProcess(
-          message.replyTo(),
-          Collections.unmodifiableMap(showsMap),
-          message.requestBody()
-        )
-      );
+    requestProcessor.tell(
+      new RequestProcessingActor.CreateBookingRequestProcess(
+        message.replyTo(),
+        message.requestBody()
+      )
+    );
     return this;
   }
 

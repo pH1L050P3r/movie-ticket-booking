@@ -33,7 +33,7 @@ public class TheatreActor extends AbstractBehavior<TheatreActor.Command> {
   public static final record GetTheatre(ActorRef<Theatre> replyTo)
     implements Command {}
 
-  public static final record GetThreatreShows(ActorRef<ShowActor.Shows> replyTo)
+  public static final record GetTheatreShows(ActorRef<ShowActor.Shows> replyTo)
     implements Command {}
 
   public static final record Theatre(Long id, String name, String location) {}
@@ -66,7 +66,12 @@ public class TheatreActor extends AbstractBehavior<TheatreActor.Command> {
     this.id = id;
     this.name = name;
     this.location = location;
-    this.askTimeout = Duration.ofSeconds(5);
+    this.askTimeout =
+      context
+        .getSystem()
+        .settings()
+        .config()
+        .getDuration("my-app.routes.ask-timeout");
     this.scheduler = getContext().getSystem().scheduler();
     this.shows = new HashMap<>();
   }
@@ -76,7 +81,7 @@ public class TheatreActor extends AbstractBehavior<TheatreActor.Command> {
     return newReceiveBuilder()
       .onMessage(UpdateShows.class, this::onUpdateShows)
       .onMessage(GetTheatre.class, this::onGetTheatre)
-      .onMessage(GetThreatreShows.class, this::onGetTheatreShows)
+      .onMessage(GetTheatreShows.class, this::onGetTheatreShows)
       .build();
   }
 
@@ -90,7 +95,7 @@ public class TheatreActor extends AbstractBehavior<TheatreActor.Command> {
     return this;
   }
 
-  private Behavior<Command> onGetTheatreShows(GetThreatreShows command) {
+  private Behavior<Command> onGetTheatreShows(GetTheatreShows command) {
     List<ShowActor.Show> showList = new ArrayList<>();
     List<CompletionStage<ShowActor.Show>> completionStages = new ArrayList<>();
 
