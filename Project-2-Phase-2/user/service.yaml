@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: tarun-user-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: tarun-user-service
+  ports:
+  - port: 8080
+    targetPort: 8080
