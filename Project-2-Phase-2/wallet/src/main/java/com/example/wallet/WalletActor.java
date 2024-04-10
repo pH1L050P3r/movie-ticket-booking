@@ -9,12 +9,21 @@ import akka.actor.typed.javadsl.Behaviors;
 import akka.actor.typed.javadsl.Receive;
 import akka.http.javadsl.Http;
 import akka.http.javadsl.model.StatusCodes;
+import akka.persistence.typed.PersistenceId;
+import akka.persistence.typed.javadsl.CommandHandler;
+import akka.persistence.typed.javadsl.Effect;
+import akka.persistence.typed.javadsl.EventHandler;
+import akka.persistence.typed.javadsl.EventSourcedBehavior;
+import com.example.CborSerializable;
 import com.example.WalletRegistry;
 import com.example.services.UserService;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.Duration;
 
-public class WalletActor extends AbstractBehavior<WalletActor.Command> {
+public class WalletActor
+  extends EventSourcedBehavior<WalletActor.Command, WalletActor.WalletEvent, WalletActor.WalletState> {
+
+  ActorContext<Command> context;
 
   private Long userId;
   private Long balance;
@@ -24,7 +33,7 @@ public class WalletActor extends AbstractBehavior<WalletActor.Command> {
   private final Scheduler scheduler;
   private final Http http;
 
-  public interface Command {}
+  public interface Command extends CborSerializable {}
 
   public static final record GetWallet(
     ActorRef<WalletRegistry.GetWalletResponse> replyTo
@@ -47,6 +56,17 @@ public class WalletActor extends AbstractBehavior<WalletActor.Command> {
     @JsonProperty("balance") Long balance
   ) {}
 
+  // Event
+  public interface WalletEvent extends CborSerializable {}
+
+  // State
+  static final class WalletState implements CborSerializable {
+
+    public Long userId;
+    public Long balance;
+    public boolean isActive = false;
+  }
+
   public static Behavior<WalletActor.Command> create(Long id, Long balance) {
     return Behaviors.setup(context -> new WalletActor(context, id, balance));
   }
@@ -65,8 +85,8 @@ public class WalletActor extends AbstractBehavior<WalletActor.Command> {
         .settings()
         .config()
         .getDuration("my-app.routes.ask-timeout");
-    this.scheduler = getContext().getSystem().scheduler();
-    this.http = Http.get(getContext().getSystem());
+    this.scheduler = context.getSystem().scheduler();
+    this.http = Http.get(context.getSystem());
   }
 
   @Override
