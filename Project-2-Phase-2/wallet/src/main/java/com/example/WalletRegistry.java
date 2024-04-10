@@ -8,6 +8,7 @@ import akka.actor.typed.javadsl.Behaviors;
 import akka.actor.typed.javadsl.Receive;
 import akka.http.javadsl.model.StatusCode;
 import akka.http.javadsl.model.StatusCodes;
+import akka.persistence.typed.PersistenceId;
 import com.example.wallet.WalletActor;
 import java.util.HashMap;
 import java.util.Map;
@@ -50,14 +51,14 @@ public class WalletRegistry extends AbstractBehavior<WalletRegistry.Command> {
 
   public static final record GetWalletResponse(
     StatusCode statusCode,
-    WalletActor.Wallet body,
+    WalletActor.WalletRes body,
     String message
   )
     implements Command {}
 
   public static final record UpdateWalletResponse(
     StatusCode statusCode,
-    WalletActor.Wallet body,
+    WalletActor.WalletRes body,
     String message
   )
     implements Command {}
@@ -94,11 +95,18 @@ public class WalletRegistry extends AbstractBehavior<WalletRegistry.Command> {
   private Behavior<Command> onGetWallet(GetWalletRequest command) {
     ActorRef<WalletActor.Command> wallet = walletMap.get(command.userId());
     if (wallet == null) {
-      command
-        .replyTo()
-        .tell(
-          new GetWalletResponse(StatusCodes.NOT_FOUND, null, "Wallet not exist")
-        );
+      wallet =
+        getContext()
+          .spawn(
+            WalletActor.create(
+              PersistenceId.ofUniqueId("wallet-" + command.userId().toString()),
+              command.userId()
+            ),
+            "wallet-" + command.userId().toString()
+          );
+
+      walletMap.put(command.userId(), wallet);
+      wallet.tell(new WalletActor.GetWallet(command.replyTo()));
     } else {
       wallet.tell(new WalletActor.GetWallet(command.replyTo()));
     }
@@ -111,19 +119,17 @@ public class WalletRegistry extends AbstractBehavior<WalletRegistry.Command> {
       wallet =
         getContext()
           .spawn(
-            WalletActor.create(command.userId(), 0L),
+            WalletActor.create(
+              PersistenceId.ofUniqueId("wallet-" + command.userId().toString()),
+              command.userId()
+            ),
             "wallet-" + command.userId().toString()
           );
-
       walletMap.put(command.userId(), wallet);
-      wallet.tell(
-        new WalletActor.UpdateWallet(command.replyTo(), command.body())
-      );
-    } else {
-      wallet.tell(
-        new WalletActor.UpdateWallet(command.replyTo(), command.body())
-      );
     }
+    wallet.tell(
+      new WalletActor.UpdateWallet(command.replyTo(), command.body())
+    );
     return this;
   }
 
@@ -132,21 +138,26 @@ public class WalletRegistry extends AbstractBehavior<WalletRegistry.Command> {
   ) {
     ActorRef<WalletActor.Command> wallet = walletMap.get(command.userId);
     if (wallet == null) {
-      command
-        .replyTo()
-        .tell(
-          new DeleteWalletResponse(StatusCodes.NOT_FOUND, "wallet not exists")
-        );
+      wallet =
+        getContext()
+          .spawn(
+            WalletActor.create(
+              PersistenceId.ofUniqueId("wallet-" + command.userId().toString()),
+              command.userId()
+            ),
+            "wallet-" + command.userId().toString()
+          );
+      wallet.tell(new WalletActor.DeleteWallet(command.replyTo(), true));
     } else {
       walletMap.remove(command.userId());
-      wallet.tell(new WalletActor.DeleteWallet(command.replyTo()));
+      wallet.tell(new WalletActor.DeleteWallet(command.replyTo(), true));
     }
     return this;
   }
 
   private Behavior<Command> onDeleteAllWallet(DeleteAllWalletRequest command) {
     for (ActorRef<WalletActor.Command> wallet : walletMap.values()) {
-      wallet.tell(new WalletActor.DeleteWallet(command.replyTo()));
+      wallet.tell(new WalletActor.DeleteWallet(command.replyTo(), false));
     }
     walletMap.clear();
     command

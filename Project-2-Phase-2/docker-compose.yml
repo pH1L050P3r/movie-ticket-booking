@@ -56,6 +56,11 @@ services:
       - USER_SERVICE_PORT=8081 
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    volumes:
+      - my_volume:/app/journal
+
+volumes:
+  my_volume:
 
 networks:
   service-network:

@@ -3,36 +3,36 @@ package com.example.wallet;
 import akka.actor.typed.ActorRef;
 import akka.actor.typed.Behavior;
 import akka.actor.typed.Scheduler;
-import akka.actor.typed.javadsl.AbstractBehavior;
 import akka.actor.typed.javadsl.ActorContext;
 import akka.actor.typed.javadsl.Behaviors;
-import akka.actor.typed.javadsl.Receive;
 import akka.http.javadsl.Http;
 import akka.http.javadsl.model.StatusCodes;
 import akka.persistence.typed.PersistenceId;
 import akka.persistence.typed.javadsl.CommandHandler;
+import akka.persistence.typed.javadsl.CommandHandlerBuilder;
 import akka.persistence.typed.javadsl.Effect;
 import akka.persistence.typed.javadsl.EventHandler;
+import akka.persistence.typed.javadsl.EventHandlerBuilder;
 import akka.persistence.typed.javadsl.EventSourcedBehavior;
 import com.example.CborSerializable;
 import com.example.WalletRegistry;
+import com.example.WalletRegistry.GetWalletResponse;
 import com.example.services.UserService;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.Duration;
 
 public class WalletActor
-  extends EventSourcedBehavior<WalletActor.Command, WalletActor.WalletEvent, WalletActor.WalletState> {
+  extends EventSourcedBehavior<WalletActor.Command, WalletActor.Event, WalletActor.Wallet> {
 
   ActorContext<Command> context;
-
-  private Long userId;
-  private Long balance;
-  private boolean isActive = false;
 
   private final Duration askTimeout;
   private final Scheduler scheduler;
   private final Http http;
 
+  private final Long walletId;
+
+  // Commands
   public interface Command extends CborSerializable {}
 
   public static final record GetWallet(
@@ -47,38 +47,73 @@ public class WalletActor
     implements Command {}
 
   public static final record DeleteWallet(
-    ActorRef<WalletRegistry.DeleteWalletResponse> replyTo
+    ActorRef<WalletRegistry.DeleteWalletResponse> replyTo,
+    boolean isReplyRequired
   )
     implements Command {}
 
-  public static final record Wallet(
-    @JsonProperty("user_id") Long userId,
+  // POJO class
+  public static final record WalletRes(
+    @JsonProperty("user_id") Long walletId,
     @JsonProperty("balance") Long balance
   ) {}
 
-  // Event
-  public interface WalletEvent extends CborSerializable {}
-
   // State
-  static final class WalletState implements CborSerializable {
+  public interface Wallet extends CborSerializable {}
 
-    public Long userId;
-    public Long balance;
-    public boolean isActive = false;
+  public static final class EmptyWallet implements Wallet {
+
+    ActiveWallet startWallet(Long balance) {
+      return new ActiveWallet(balance);
+    }
   }
 
-  public static Behavior<WalletActor.Command> create(Long id, Long balance) {
-    return Behaviors.setup(context -> new WalletActor(context, id, balance));
+  public static final class ActiveWallet implements Wallet {
+
+    Long balance;
+
+    ActiveWallet(Long balance) {
+      this.balance = balance;
+    }
+
+    ActiveWallet credit(Long amount) {
+      return new ActiveWallet(balance + amount);
+    }
+
+    ActiveWallet debit(Long amount) {
+      if (!canDebit(amount)) {
+        throw new IllegalStateException("Insufficient balance.");
+      }
+      return new ActiveWallet(balance - amount);
+    }
+
+    boolean canDebit(Long amount) {
+      return (balance - amount) >= 0;
+    }
+
+    ClosedWallet delete() {
+      return new ClosedWallet();
+    }
   }
 
-  private WalletActor(
-    ActorContext<Command> context,
-    Long userId,
-    Long balance
+  public static final class ClosedWallet implements Wallet {}
+
+  public static Behavior<Command> create(
+    PersistenceId persistenceId,
+    Long userId
   ) {
-    super(context);
-    this.userId = userId;
-    this.balance = balance;
+    return Behaviors.setup(context ->
+      new WalletActor(context, persistenceId, userId)
+    );
+  }
+
+  public WalletActor(
+    ActorContext<Command> context,
+    PersistenceId persistenceId,
+    Long userId
+  ) {
+    super(persistenceId);
+    this.context = context;
     this.askTimeout =
       context
         .getSystem()
@@ -87,101 +122,210 @@ public class WalletActor
         .getDuration("my-app.routes.ask-timeout");
     this.scheduler = context.getSystem().scheduler();
     this.http = Http.get(context.getSystem());
+    this.walletId = userId;
+  }
+
+  // Events
+  interface Event extends CborSerializable {}
+
+  public enum GetEvent implements Event {
+    INSTANCE,
+  }
+
+  public static record CreditEvent(Long balance) implements Event {}
+
+  public static record DebitEvent(Long balance) implements Event {}
+
+  public enum DeleteEvent implements Event {
+    INSTANCE,
   }
 
   @Override
-  public Receive<Command> createReceive() {
-    return newReceiveBuilder()
-      .onMessage(GetWallet.class, this::onGetWallet)
-      .onMessage(UpdateWallet.class, this::onUpdateWallet)
-      .onMessage(DeleteWallet.class, this::onDeleteWallet)
-      .build();
+  public Wallet emptyState() {
+    return new EmptyWallet();
   }
 
-  private Behavior<Command> onGetWallet(GetWallet command) {
-    if (isActive) {
-      command
-        .replyTo()
-        .tell(
-          new WalletRegistry.GetWalletResponse(
-            StatusCodes.OK,
-            new Wallet(userId, balance),
-            ""
-          )
-        );
-    } else {
-      command
-        .replyTo()
-        .tell(
-          new WalletRegistry.GetWalletResponse(StatusCodes.NOT_FOUND, null, "")
-        );
-    }
-    return this;
+  @Override
+  public CommandHandler<Command, Event, Wallet> commandHandler() {
+    CommandHandlerBuilder<Command, Event, Wallet> builder = newCommandHandlerBuilder();
+
+    builder
+      .forStateType(EmptyWallet.class)
+      .onCommand(GetWallet.class, this::getWallet)
+      .onCommand(UpdateWallet.class, this::updateWallet);
+
+    builder
+      .forStateType(ActiveWallet.class)
+      .onCommand(GetWallet.class, this::getWallet)
+      .onCommand(UpdateWallet.class, this::updateWallet)
+      .onCommand(DeleteWallet.class, this::deleteWallet);
+
+    return builder.build();
   }
 
-  private Behavior<Command> onDeleteWallet(DeleteWallet command) {
-    this.balance = 0L;
-    this.isActive = false;
-
-    command
-      .replyTo()
-      .tell(new WalletRegistry.DeleteWalletResponse(StatusCodes.OK, ""));
-
-    return Behaviors.stopped();
+  private Effect<Event, Wallet> getWallet(
+    ActiveWallet wallet,
+    GetWallet command
+  ) {
+    return Effect()
+      .reply(
+        command.replyTo,
+        new WalletRegistry.GetWalletResponse(
+          StatusCodes.OK,
+          new WalletRes(walletId, wallet.balance),
+          ""
+        )
+      );
   }
 
-  private Behavior<Command> onUpdateWallet(UpdateWallet command) {
-    if (!isActive && !UserService.isUserExist(userId, http)) {
-      command
-        .replyTo()
-        .tell(
-          new WalletRegistry.UpdateWalletResponse(
-            StatusCodes.BAD_REQUEST,
-            null,
-            "User does not exit"
-          )
-        );
-      return this;
-    }
-    isActive = true;
+  private Effect<Event, Wallet> getWallet(
+    EmptyWallet wallet,
+    GetWallet command
+  ) {
+    return Effect()
+      .reply(
+        command.replyTo,
+        new WalletRegistry.GetWalletResponse(StatusCodes.NOT_FOUND, null, "")
+      );
+  }
+
+  private Effect<Event, Wallet> updateWallet(
+    EmptyWallet wallet,
+    UpdateWallet command
+  ) {
     if (
-      "debit".equals(command.body().action()) &&
-      balance >= command.body().amount()
+      "debit".equals(command.body().action()) || command.body().amount() < 0
     ) {
-      this.balance -= command.body().amount();
-      command
-        .replyTo()
-        .tell(
-          new WalletRegistry.UpdateWalletResponse(
-            StatusCodes.OK,
-            new Wallet(userId, balance),
-            ""
-          )
-        );
-    } else if (
-      "credit".equals(command.body().action()) && command.body().amount() >= 0
-    ) {
-      this.balance += command.body().amount();
-      command
-        .replyTo()
-        .tell(
-          new WalletRegistry.UpdateWalletResponse(
-            StatusCodes.OK,
-            new Wallet(userId, balance),
-            ""
-          )
-        );
-    } else {
-      command
-        .replyTo()
-        .tell(
+      return Effect()
+        .reply(
+          command.replyTo(),
           new WalletRegistry.UpdateWalletResponse(
             StatusCodes.BAD_REQUEST,
             null,
-            "action or amount is not correct"
+            "Insufficient Balance"
           )
         );
     }
-    return this;
+
+    if ("credit".equals(command.body().action())) {
+      return Effect()
+        .persist(new CreditEvent(command.body().amount()))
+        .thenReply(
+          command.replyTo,
+          newWallet ->
+            new WalletRegistry.UpdateWalletResponse(
+              StatusCodes.OK,
+              new WalletRes(walletId, ((ActiveWallet) newWallet).balance),
+              ""
+            )
+        );
+    } else {
+      return Effect()
+        .persist(new DebitEvent(command.body().amount()))
+        .thenReply(
+          command.replyTo,
+          newWallet ->
+            new WalletRegistry.UpdateWalletResponse(
+              StatusCodes.OK,
+              new WalletRes(walletId, ((ActiveWallet) newWallet).balance),
+              ""
+            )
+        );
+    }
+  }
+
+  private Effect<Event, Wallet> updateWallet(
+    ActiveWallet wallet,
+    UpdateWallet command
+  ) {
+    if (!UserService.isUserExist(walletId, http)) {
+      return Effect()
+        .reply(
+          command.replyTo(),
+          new WalletRegistry.UpdateWalletResponse(
+            StatusCodes.BAD_REQUEST,
+            null,
+            "Insufficient Balance"
+          )
+        );
+    }
+    if ("credit".equals(command.body().action())) {
+      return Effect()
+        .persist(new CreditEvent(command.body().amount()))
+        .thenReply(
+          command.replyTo,
+          newWallet ->
+            new WalletRegistry.UpdateWalletResponse(
+              StatusCodes.OK,
+              new WalletRes(walletId, ((ActiveWallet) newWallet).balance),
+              ""
+            )
+        );
+    } else if (wallet.balance >= command.body().amount()) {
+      return Effect()
+        .persist(new DebitEvent(command.body().amount()))
+        .thenReply(
+          command.replyTo,
+          newWallet ->
+            new WalletRegistry.UpdateWalletResponse(
+              StatusCodes.OK,
+              new WalletRes(walletId, ((ActiveWallet) newWallet).balance),
+              ""
+            )
+        );
+    } else {
+      return Effect()
+        .reply(
+          command.replyTo(),
+          new WalletRegistry.UpdateWalletResponse(
+            StatusCodes.BAD_REQUEST,
+            null,
+            "Insufficient Balance"
+          )
+        );
+    }
+  }
+
+  private Effect<Event, Wallet> deleteWallet(
+    ActiveWallet wallet,
+    DeleteWallet command
+  ) {
+    if (command.isReplyRequired()) {
+      return Effect()
+        .persist(DeleteEvent.INSTANCE)
+        .thenReply(
+          command.replyTo(),
+          newWallet ->
+            new WalletRegistry.DeleteWalletResponse(StatusCodes.OK, "")
+        );
+    } else {
+      return Effect().persist(DeleteEvent.INSTANCE).thenNoReply();
+    }
+  }
+
+  @Override
+  public EventHandler<Wallet, Event> eventHandler() {
+    EventHandlerBuilder<Wallet, Event> builder = newEventHandlerBuilder();
+
+    builder
+      .forStateType(EmptyWallet.class)
+      .onEvent(
+        CreditEvent.class,
+        (wallet, credit) -> wallet.startWallet(credit.balance())
+      );
+
+    builder
+      .forStateType(ActiveWallet.class)
+      .onEvent(
+        CreditEvent.class,
+        (wallet, credit) -> wallet.credit(credit.balance())
+      )
+      .onEvent(
+        DebitEvent.class,
+        (wallet, debit) -> wallet.debit(debit.balance())
+      )
+      .onEvent(DeleteEvent.class, (wallet, delete) -> wallet.delete());
+
+    return builder.build();
   }
 }

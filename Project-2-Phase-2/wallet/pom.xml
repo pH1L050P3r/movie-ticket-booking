@@ -68,6 +68,12 @@
             <version>2.9.2</version>
         </dependency>
         <dependency>
+            <groupId>org.fusesource.leveldbjni</groupId>
+            <artifactId>leveldbjni-all</artifactId>
+            <version>1.8</version>
+        </dependency>
+
+        <dependency>
             <groupId>com.typesafe.akka</groupId>
             <artifactId>akka-http-testkit_${scala.binary.version}</artifactId>
             <scope>test</scope>
