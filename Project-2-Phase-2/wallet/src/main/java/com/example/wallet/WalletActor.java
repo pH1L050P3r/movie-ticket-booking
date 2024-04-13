@@ -16,7 +16,6 @@ import akka.persistence.typed.javadsl.EventHandlerBuilder;
 import akka.persistence.typed.javadsl.EventSourcedBehavior;
 import com.example.CborSerializable;
 import com.example.WalletRegistry;
-import com.example.WalletRegistry.GetWalletResponse;
 import com.example.services.UserService;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.Duration;
@@ -91,8 +90,8 @@ public class WalletActor
       return (balance - amount) >= 0;
     }
 
-    ClosedWallet delete() {
-      return new ClosedWallet();
+    EmptyWallet delete() {
+      return new EmptyWallet();
     }
   }
 
@@ -152,7 +151,8 @@ public class WalletActor
     builder
       .forStateType(EmptyWallet.class)
       .onCommand(GetWallet.class, this::getWallet)
-      .onCommand(UpdateWallet.class, this::updateWallet);
+      .onCommand(UpdateWallet.class, this::updateWallet)
+      .onCommand(DeleteWallet.class, this::deleteWallet);
 
     builder
       .forStateType(ActiveWallet.class)
@@ -293,14 +293,37 @@ public class WalletActor
     if (command.isReplyRequired()) {
       return Effect()
         .persist(DeleteEvent.INSTANCE)
-        .thenReply(
-          command.replyTo(),
-          newWallet ->
-            new WalletRegistry.DeleteWalletResponse(StatusCodes.OK, "")
-        );
+        .thenRun(() ->
+          command
+            .replyTo()
+            .tell(
+              new WalletRegistry.DeleteWalletResponse(
+                StatusCodes.OK,
+                "Wallet deleted"
+              )
+            )
+        )
+        .thenStop();
     } else {
-      return Effect().persist(DeleteEvent.INSTANCE).thenNoReply();
+      return Effect().persist(DeleteEvent.INSTANCE).thenStop();
     }
+  }
+
+  private Effect<Event, Wallet> deleteWallet(
+    EmptyWallet wallet,
+    DeleteWallet command
+  ) {
+    if (command.isReplyRequired()) {
+      command
+        .replyTo()
+        .tell(
+          new WalletRegistry.DeleteWalletResponse(
+            StatusCodes.NOT_FOUND,
+            "Wallet does not exist"
+          )
+        );
+    }
+    return Effect().stop();
   }
 
   @Override
