@@ -8,6 +8,7 @@ import akka.actor.typed.javadsl.Behaviors;
 import akka.http.javadsl.Http;
 import akka.http.javadsl.ServerBinding;
 import akka.http.javadsl.server.Route;
+import akka.persistence.typed.PersistenceId;
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletionStage;
 
@@ -41,7 +42,7 @@ public class StartApp {
   public static void main(String[] args) throws Exception {
     Behavior<NotUsed> rootBehavior = Behaviors.setup(context -> {
       ActorRef<WalletRegistry.Command> walletRegistryActor = context.spawn(
-        WalletRegistry.create(),
+        WalletRegistry.create(PersistenceId.ofUniqueId("Wallet-registry")),
         "WalletRegistry"
       );
 
