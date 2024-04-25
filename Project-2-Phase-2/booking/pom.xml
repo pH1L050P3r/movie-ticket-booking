@@ -128,7 +128,7 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>1.6.0</version>
                 <configuration>
-                    <mainClass>com.example.StartApp</mainClass>
+                    <mainClass>com.example.App</mainClass>
                 </configuration>
             </plugin>
         </plugins>
