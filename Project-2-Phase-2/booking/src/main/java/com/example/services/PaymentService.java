@@ -32,8 +32,7 @@ public class PaymentService {
     Http http
   ) {
     Integer timeOut = PAYMENT_MAX_RETRY;
-    String url =
-      "http://host.docker.internal:8082/wallets/" + Long.toString(userId);
+    String url = "http://localhost:8082/wallets/" + Long.toString(userId);
     Map<String, Object> data = new HashMap<>();
     data.put("action", action);
     data.put("amount", Long.toString(amount));

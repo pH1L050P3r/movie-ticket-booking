@@ -78,7 +78,7 @@ public class App {
   static void startHttpServer(Route route, ActorSystem<?> system) {
     CompletionStage<ServerBinding> futureBinding = Http
       .get(system)
-      .newServerAt("localhost", 8081)
+      .newServerAt("0.0.0.0", 8081)
       .bind(route);
 
     futureBinding.whenComplete((binding, exception) -> {

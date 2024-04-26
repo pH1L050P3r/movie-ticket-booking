@@ -18,8 +18,7 @@ public class UserService {
 
   private static Boolean getUser(Long userId, Http http) {
     Integer timeOut = PAYMENT_MAX_RETRY;
-    String url =
-      "http://host.docker.internal:8080/users/" + Long.toString(userId);
+    String url = "http://localhost:8080/users/" + Long.toString(userId);
 
     try {
       while (timeOut-- != 0) {
