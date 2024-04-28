@@ -6,120 +6,118 @@ import akka.actor.typed.javadsl.AbstractBehavior;
 import akka.actor.typed.javadsl.ActorContext;
 import akka.actor.typed.javadsl.Behaviors;
 import akka.actor.typed.javadsl.Receive;
-import com.example.theatre.TheatreActor;
+import akka.cluster.sharding.typed.javadsl.EntityTypeKey;
+import akka.serialization.jackson.CborSerializable;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ShowActor extends AbstractBehavior<ShowActor.Command> {
 
-  private Long id;
-  private String title;
-  private Long price;
-  private Long seatsAvailable;
-  private Long theatreId;
+  public Long id;
+  public String title;
+  public Long price;
+  public Long seatsAvailable;
+  public Long theatreId;
 
   // for generating unique id for each booking
-  private Long bookingNextId = 1L;
+  public Long bookingNextId = 1L;
 
-  private ActorRef<TheatreActor.Command> theatreActor;
-  private static final Logger log = LoggerFactory.getLogger(ShowActor.class);
-  private final Map<Long, List<Booking>> bookings;
+  public static final Logger log = LoggerFactory.getLogger(ShowActor.class);
+  public final Map<Long, List<Booking>> bookings;
 
-  public interface Command {}
+  public static final EntityTypeKey<Command> TypeKey = EntityTypeKey.create(
+    ShowActor.Command.class,
+    "ShowActorEntity"
+  );
 
-  public static final record GetShow(ActorRef<Show> replyTo)
-    implements Command {}
+  public interface Command extends CborSerializable {}
 
-  public static final record GetUserBookings(
-    ActorRef<Bookings> replyTo,
-    Long userId
+  public final record Initialize(
+    Long id,
+    String title,
+    Long price,
+    Long seatsAvailable,
+    Long theatreId
   )
     implements Command {}
 
-  public static final record CreateShowBooking(
+  public final record GetShow(ActorRef<Show> replyTo) implements Command {}
+
+  public final record GetUserBookings(ActorRef<Bookings> replyTo, Long userId)
+    implements Command {}
+
+  public final record CreateShowBooking(
     ActorRef<Booking> replyTo,
     Long userId,
     Long seatsBooked
   )
     implements Command {}
 
-  public static final record DeleteUserShowBookings(
+  public final record DeleteUserShowBookings(
     ActorRef<DeleteBookingResponse> replyTo,
     Long userId
   )
     implements Command {}
 
-  public static final record DeleteAllBookings(
-    ActorRef<DeleteBookingResponse> replyTo
-  )
+  public final record DeleteAllBookings(ActorRef<DeleteBookingResponse> replyTo)
     implements Command {}
 
-  public static final record DeleteBookingResponse(
-    Map<Long, Long> refundUserAmountMap
-  ) {}
+  public final record DeleteBookingResponse(Map<Long, Long> refundUserAmountMap)
+    implements Command {}
 
-  public static final record Show(
-    Long id,
-    String title,
-    Long price,
-    @JsonProperty("theatre_id") Long theatreId,
-    @JsonProperty("seats_available") Long seatsAvailable
-  ) {}
+  @NoArgsConstructor
+  @AllArgsConstructor
+  @Getter
+  @Setter
+  public static final class Show implements Command {
 
-  public static final record Shows(List<Show> shows) {}
+    public Long id;
+    public String title;
+    public Long price;
+
+    @JsonProperty("theatre_id")
+    public Long theatreId;
+
+    @JsonProperty("seats_available")
+    public Long seatsAvailable;
+  }
+
+  @NoArgsConstructor
+  @AllArgsConstructor
+  @Getter
+  @Setter
+  public static final class Shows implements Command {
+
+    List<Show> shows;
+  }
 
   public static final record Booking(
     Long id,
     @JsonProperty("show_id") Long showId,
     @JsonProperty("user_id") Long userId,
     @JsonProperty("seats_booked") Long seatsBooked
-  ) {}
+  )
+    implements Command {}
 
-  public static final record Bookings(List<Booking> bookings) {}
+  public static final record Bookings(List<Booking> bookings)
+    implements Command {}
 
-  public static Behavior<ShowActor.Command> create(
-    Long id,
-    String title,
-    Long price,
-    Long seatsAvailable,
-    Long theatreId,
-    ActorRef<TheatreActor.Command> theatreActor
-  ) {
-    return Behaviors.setup(context ->
-      new ShowActor(
-        context,
-        id,
-        title,
-        price,
-        seatsAvailable,
-        theatreId,
-        theatreActor
-      )
-    );
+  public static Behavior<ShowActor.Command> create() {
+    return Behaviors.setup(ShowActor::new);
   }
 
-  private ShowActor(
-    ActorContext<Command> context,
-    Long id,
-    String title,
-    Long price,
-    Long seatsAvailable,
-    Long theatreId,
-    ActorRef<TheatreActor.Command> theatreActor
-  ) {
+  private ShowActor(ActorContext<Command> context) {
     super(context);
-    this.id = id;
-    this.title = title;
-    this.price = price;
-    this.seatsAvailable = seatsAvailable;
-    this.theatreActor = theatreActor;
-    this.theatreId = theatreId;
     this.bookings = new HashMap<>();
   }
 
@@ -130,12 +128,22 @@ public class ShowActor extends AbstractBehavior<ShowActor.Command> {
   @Override
   public Receive<Command> createReceive() {
     return newReceiveBuilder()
+      .onMessage(Initialize.class, this::onInitialize)
       .onMessage(GetShow.class, this::onGetShow)
       .onMessage(CreateShowBooking.class, this::onCreateShowBooking)
       .onMessage(GetUserBookings.class, this::onGetUserAllBookings)
       .onMessage(DeleteUserShowBookings.class, this::onDeleteUserAllBooking)
       .onMessage(DeleteAllBookings.class, this::onDeleteAllBookings)
       .build();
+  }
+
+  private Behavior<Command> onInitialize(Initialize command) {
+    this.id = command.id();
+    this.price = command.price();
+    this.title = command.title();
+    this.seatsAvailable = command.seatsAvailable();
+    this.theatreId = command.theatreId();
+    return this;
   }
 
   private Behavior<Command> onGetShow(GetShow command) {

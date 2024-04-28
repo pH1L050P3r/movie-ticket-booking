@@ -8,64 +8,77 @@ import akka.actor.typed.javadsl.ActorContext;
 import akka.actor.typed.javadsl.AskPattern;
 import akka.actor.typed.javadsl.Behaviors;
 import akka.actor.typed.javadsl.Receive;
+import akka.cluster.sharding.typed.javadsl.ClusterSharding;
+import akka.cluster.sharding.typed.javadsl.EntityRef;
+import akka.cluster.sharding.typed.javadsl.EntityTypeKey;
+import akka.serialization.jackson.CborSerializable;
 import com.example.show.ShowActor;
+import com.example.show.ShowActor.Show;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletionStage;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class TheatreActor extends AbstractBehavior<TheatreActor.Command> {
 
-  private Long id;
-  private String name;
-  private String location;
-  private Map<Long, ActorRef<ShowActor.Command>> shows;
-  private static final Logger log = LoggerFactory.getLogger(TheatreActor.class);
-  private final Duration askTimeout;
-  private final Scheduler scheduler;
+  public Long id;
+  public String name;
+  public String location;
+  public List<Long> showsId;
+  public static final Logger log = LoggerFactory.getLogger(TheatreActor.class);
+  public final Duration askTimeout;
+  public final Scheduler scheduler;
+  public final ClusterSharding sharding;
 
-  public interface Command {}
+  public static final EntityTypeKey<Command> TypeKey = EntityTypeKey.create(
+    TheatreActor.Command.class,
+    "TheatreActorEntity"
+  );
 
-  public static final record GetTheatre(ActorRef<Theatre> replyTo)
+  public interface Command extends CborSerializable {}
+
+  public final record Initialize(Long id, String name, String location)
     implements Command {}
 
-  public static final record GetTheatreShows(ActorRef<ShowActor.Shows> replyTo)
+  public final record GetTheatre(ActorRef<Theatre> replyTo)
     implements Command {}
 
-  public static final record Theatre(Long id, String name, String location) {}
+  public final record GetTheatreShows(ActorRef<ShowActor.Shows> replyTo)
+    implements Command {}
 
-  public static final record TheaterShows(List<ShowActor.Show> shows) {}
+  @NoArgsConstructor
+  @AllArgsConstructor
+  @Getter
+  @Setter
+  public static final class Theatre implements Command {
 
-  public static final record UpdateShows(
+    public Long id;
+    public String name;
+    public String location;
+  }
+
+  public final record TheaterShows(List<ShowActor.Show> shows)
+    implements Command {}
+
+  public final record UpdateShows(
     Long showId,
-    ActorRef<ShowActor.Command> show
+    EntityRef<ShowActor.Command> show
   )
     implements Command {}
 
-  public static Behavior<TheatreActor.Command> create(
-    Long id,
-    String name,
-    String location
-  ) {
-    return Behaviors.setup(context ->
-      new TheatreActor(context, id, name, location)
-    );
+  public static Behavior<TheatreActor.Command> create() {
+    return Behaviors.setup(TheatreActor::new);
   }
 
-  private TheatreActor(
-    ActorContext<Command> context,
-    Long id,
-    String name,
-    String location
-  ) {
+  private TheatreActor(ActorContext<Command> context) {
     super(context);
-    this.id = id;
-    this.name = name;
-    this.location = location;
+    sharding = ClusterSharding.get(context.getSystem());
     this.askTimeout =
       context
         .getSystem()
@@ -73,20 +86,28 @@ public class TheatreActor extends AbstractBehavior<TheatreActor.Command> {
         .config()
         .getDuration("my-app.routes.ask-timeout");
     this.scheduler = getContext().getSystem().scheduler();
-    this.shows = new HashMap<>();
+    this.showsId = new ArrayList<>();
   }
 
   @Override
   public Receive<Command> createReceive() {
     return newReceiveBuilder()
+      .onMessage(Initialize.class, this::onTheatreInitialization)
       .onMessage(UpdateShows.class, this::onUpdateShows)
       .onMessage(GetTheatre.class, this::onGetTheatre)
       .onMessage(GetTheatreShows.class, this::onGetTheatreShows)
       .build();
   }
 
+  private Behavior<Command> onTheatreInitialization(Initialize command) {
+    this.id = command.id();
+    this.name = command.name();
+    this.location = command.location();
+    return this;
+  }
+
   private Behavior<Command> onUpdateShows(UpdateShows command) {
-    shows.put(command.showId(), command.show());
+    showsId.add(command.showId());
     return this;
   }
 
@@ -99,7 +120,11 @@ public class TheatreActor extends AbstractBehavior<TheatreActor.Command> {
     List<ShowActor.Show> showList = new ArrayList<>();
     List<CompletionStage<ShowActor.Show>> completionStages = new ArrayList<>();
 
-    for (ActorRef<ShowActor.Command> showActor : this.shows.values()) {
+    for (Long showId : this.showsId) {
+      EntityRef<ShowActor.Command> showActor = sharding.entityRefFor(
+        ShowActor.TypeKey,
+        "Show-" + Long.toString(showId)
+      );
       CompletionStage<ShowActor.Show> completion = AskPattern.ask(
         showActor,
         ShowActor.GetShow::new,
@@ -109,9 +134,13 @@ public class TheatreActor extends AbstractBehavior<TheatreActor.Command> {
       completionStages.add(completion);
     }
 
-    for (CompletionStage<ShowActor.Show> completion : completionStages) {
-      completion.thenAccept(showList::add);
-    }
+    try {
+      for (CompletionStage<ShowActor.Show> completion : completionStages) {
+        Show show = completion.toCompletableFuture().get();
+        showList.add(show);
+      }
+    } catch (Exception e) {}
+    log.info(showList.toString());
     command.replyTo().tell(new ShowActor.Shows(showList));
     return this;
   }

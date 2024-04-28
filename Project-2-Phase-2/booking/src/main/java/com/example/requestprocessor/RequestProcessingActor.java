@@ -8,8 +8,11 @@ import akka.actor.typed.javadsl.ActorContext;
 import akka.actor.typed.javadsl.AskPattern;
 import akka.actor.typed.javadsl.Behaviors;
 import akka.actor.typed.javadsl.Receive;
+import akka.cluster.sharding.typed.javadsl.ClusterSharding;
+import akka.cluster.sharding.typed.javadsl.EntityRef;
 import akka.http.javadsl.Http;
 import akka.http.javadsl.model.StatusCodes;
+import akka.serialization.jackson.CborSerializable;
 import com.example.BookingRegistry;
 import com.example.services.PaymentService;
 import com.example.services.UserService;
@@ -25,6 +28,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.CompletionStage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,32 +36,36 @@ import org.slf4j.LoggerFactory;
 public class RequestProcessingActor
   extends AbstractBehavior<RequestProcessingActor.Command> {
 
-  private final Duration askTimeout;
-  private final Scheduler scheduler;
-  private final Http http;
-  private final Map<Long, ActorRef<ShowActor.Command>> showMap;
-  private final Map<Long, ActorRef<TheatreActor.Command>> theatreMap;
-  private static final Logger log = LoggerFactory.getLogger(
+  public final Duration askTimeout;
+  public final Scheduler scheduler;
+  public final Http http;
+  public final Set<Long> showIdList;
+  public final Set<Long> theatreIdList;
+  public final ClusterSharding sharding;
+  public static final Logger log = LoggerFactory.getLogger(
     RequestProcessingActor.class
   );
 
   public static Behavior<Command> create(
-    Map<Long, ActorRef<ShowActor.Command>> showMap,
-    Map<Long, ActorRef<TheatreActor.Command>> theatreMap
+    Set<Long> showIdList,
+    Set<Long> theatreIdList,
+    ClusterSharding sharding
   ) {
     return Behaviors.setup(context ->
-      new RequestProcessingActor(context, showMap, theatreMap)
+      new RequestProcessingActor(context, showIdList, theatreIdList, sharding)
     );
   }
 
   private RequestProcessingActor(
     ActorContext<Command> context,
-    Map<Long, ActorRef<ShowActor.Command>> showMap,
-    Map<Long, ActorRef<TheatreActor.Command>> theatreMap
+    Set<Long> showIdList,
+    Set<Long> theatreIdList,
+    ClusterSharding sharding
   ) {
     super(context);
-    this.showMap = showMap;
-    this.theatreMap = theatreMap;
+    this.showIdList = showIdList;
+    this.theatreIdList = theatreIdList;
+    this.sharding = sharding;
     this.askTimeout =
       context
         .getSystem()
@@ -68,7 +76,7 @@ public class RequestProcessingActor
     this.http = Http.get(getContext().getSystem());
   }
 
-  public interface Command {}
+  public interface Command extends CborSerializable {}
 
   public static final record GetShowRequestProcess(
     ActorRef<BookingRegistry.GetShowResponse> replyTo,
@@ -151,8 +159,11 @@ public class RequestProcessingActor
   }
 
   private Behavior<Command> onGetShow(GetShowRequestProcess command) {
-    ActorRef<ShowActor.Command> showActor = showMap.get(command.showId());
-    if (showActor != null) {
+    if (showIdList.contains(command.showId())) {
+      EntityRef<ShowActor.Command> showActor = sharding.entityRefFor(
+        ShowActor.TypeKey,
+        "Show-" + Long.toString(command.showId())
+      );
       Show show = RequestProcessingUtils.getShowFromShowActor(
         showActor,
         askTimeout,
@@ -160,14 +171,20 @@ public class RequestProcessingActor
       );
       command
         .replyTo()
-        .tell(new BookingRegistry.GetShowResponse(show, StatusCodes.OK, ""));
+        .tell(
+          new BookingRegistry.GetShowResponse(
+            show,
+            StatusCodes.OK.intValue(),
+            ""
+          )
+        );
     } else {
       command
         .replyTo()
         .tell(
           new BookingRegistry.GetShowResponse(
             null,
-            StatusCodes.NOT_FOUND,
+            StatusCodes.NOT_FOUND.intValue(),
             "Show not found"
           )
         );
@@ -176,10 +193,11 @@ public class RequestProcessingActor
   }
 
   private Behavior<Command> onGetTheatre(GetTheatreRequestProcess message) {
-    ActorRef<TheatreActor.Command> theatreActor = theatreMap.get(
-      message.theatreId()
-    );
-    if (theatreActor != null) {
+    if (theatreIdList.contains(message.theatreId())) {
+      EntityRef<TheatreActor.Command> theatreActor = sharding.entityRefFor(
+        TheatreActor.TypeKey,
+        "Theater-" + Long.toString(message.theatreId())
+      );
       Theatre theatre = RequestProcessingUtils.getTheatreFromTheatreActor(
         theatreActor,
         askTimeout,
@@ -188,7 +206,11 @@ public class RequestProcessingActor
       message
         .replyTo()
         .tell(
-          new BookingRegistry.GetTheatreResponse(theatre, StatusCodes.OK, "")
+          new BookingRegistry.GetTheatreResponse(
+            theatre,
+            StatusCodes.OK.intValue(),
+            ""
+          )
         );
     } else {
       message
@@ -196,7 +218,7 @@ public class RequestProcessingActor
         .tell(
           new BookingRegistry.GetTheatreResponse(
             null,
-            StatusCodes.NOT_FOUND,
+            StatusCodes.NOT_FOUND.intValue(),
             "Theatre not Found"
           )
         );
@@ -207,7 +229,15 @@ public class RequestProcessingActor
   private Behavior<Command> onGetAllTheatres(
     GetAllTheatresRequestProcess message
   ) {
-    Collection<ActorRef<TheatreActor.Command>> theatresActors = theatreMap.values();
+    Collection<EntityRef<TheatreActor.Command>> theatresActors = new ArrayList<EntityRef<TheatreActor.Command>>();
+    for (Long theatreId : theatreIdList) {
+      theatresActors.add(
+        sharding.entityRefFor(
+          TheatreActor.TypeKey,
+          "Theater-" + Long.toString(theatreId)
+        )
+      );
+    }
     List<Theatre> theatres = RequestProcessingUtils.getTheatreListFromTheatreActorList(
       theatresActors,
       askTimeout,
@@ -216,7 +246,11 @@ public class RequestProcessingActor
     message
       .replyTo()
       .tell(
-        new BookingRegistry.GetAllTheatresResponse(theatres, StatusCodes.OK, "")
+        new BookingRegistry.GetAllTheatresResponse(
+          theatres,
+          StatusCodes.OK.intValue(),
+          ""
+        )
       );
     return this;
   }
@@ -224,10 +258,11 @@ public class RequestProcessingActor
   private Behavior<Command> onGetTheatreAllShows(
     GetTheatreAllShowsRequestProcess message
   ) {
-    ActorRef<TheatreActor.Command> theatreActor = theatreMap.get(
-      message.theatreId()
-    );
-    if (theatreActor != null) {
+    if (theatreIdList.contains(message.theatreId())) {
+      EntityRef<TheatreActor.Command> theatreActor = sharding.entityRefFor(
+        TheatreActor.TypeKey,
+        "Theater-" + Long.toString(message.theatreId())
+      );
       List<Show> shows = RequestProcessingUtils.getTheatreAllShows(
         theatreActor,
         askTimeout,
@@ -238,7 +273,7 @@ public class RequestProcessingActor
         .tell(
           new BookingRegistry.GetTheatreAllShowsResponse(
             shows,
-            StatusCodes.OK,
+            StatusCodes.OK.intValue(),
             ""
           )
         );
@@ -249,7 +284,7 @@ public class RequestProcessingActor
         .tell(
           new BookingRegistry.GetTheatreAllShowsResponse(
             emptyList,
-            StatusCodes.NOT_FOUND,
+            StatusCodes.NOT_FOUND.intValue(),
             "Theatre not exists"
           )
         );
@@ -264,7 +299,11 @@ public class RequestProcessingActor
     List<ShowActor.Booking> bookings = new ArrayList<>();
     List<CompletionStage<ShowActor.Bookings>> completionStages = new ArrayList<>();
 
-    for (ActorRef<ShowActor.Command> showActor : showMap.values()) {
+    for (Long showId : showIdList) {
+      EntityRef<ShowActor.Command> showActor = sharding.entityRefFor(
+        ShowActor.TypeKey,
+        "Show-" + Long.toString(showId)
+      );
       CompletionStage<ShowActor.Bookings> completion = AskPattern.ask(
         showActor,
         ref -> new ShowActor.GetUserBookings(ref, userId),
@@ -276,7 +315,6 @@ public class RequestProcessingActor
 
     for (CompletionStage<ShowActor.Bookings> completion : completionStages) {
       completion.thenAccept(response -> {
-        log.info(response.bookings().toString());
         bookings.addAll(response.bookings());
       });
     }
@@ -285,7 +323,7 @@ public class RequestProcessingActor
       .tell(
         new BookingRegistry.GetUserAllBookingsResponse(
           bookings,
-          StatusCodes.OK,
+          StatusCodes.OK.intValue(),
           ""
         )
       );
@@ -299,30 +337,31 @@ public class RequestProcessingActor
     Long userId = message.requestBody.userId();
     Long seatsBooked = message.requestBody.seatsBooked();
 
-    ActorRef<ShowActor.Command> showActor = showMap.get(showId);
-
-    if (showActor == null/* || !UserService.isUserExist(userId, http)*/) {
+    if (!showIdList.contains(showId)) {
       message
         .replyTo()
         .tell(
           new BookingRegistry.CreateBookingResponse(
             null,
-            StatusCodes.BAD_REQUEST,
+            StatusCodes.BAD_REQUEST.intValue(),
             "User or Show does not exists"
           )
         );
       return this;
     }
-
+    EntityRef<ShowActor.Command> showActor = sharding.entityRefFor(
+      ShowActor.TypeKey,
+      "Show-" + Long.toString(showId)
+    );
     Show show = RequestProcessingUtils.getShowFromShowActor(
       showActor,
       askTimeout,
       scheduler
     );
-    Long amount = show.price() * seatsBooked;
+    Long amount = show.price * seatsBooked;
     String paymentResponse = PaymentService.payment(userId, amount, http);
     if (
-      show.seatsAvailable() < seatsBooked ||
+      show.seatsAvailable < seatsBooked ||
       !paymentResponse.equalsIgnoreCase("SUCCESS")
     ) {
       message
@@ -330,7 +369,7 @@ public class RequestProcessingActor
         .tell(
           new BookingRegistry.CreateBookingResponse(
             null,
-            StatusCodes.BAD_REQUEST,
+            StatusCodes.BAD_REQUEST.intValue(),
             "Payment failed or Seats not available"
           )
         );
@@ -352,7 +391,7 @@ public class RequestProcessingActor
           .tell(
             new BookingRegistry.CreateBookingResponse(
               null,
-              StatusCodes.BAD_REQUEST,
+              StatusCodes.BAD_REQUEST.intValue(),
               "Seats not Available"
             )
           );
@@ -361,7 +400,7 @@ public class RequestProcessingActor
         message.replyTo.tell(
           new BookingRegistry.CreateBookingResponse(
             response,
-            StatusCodes.OK,
+            StatusCodes.OK.intValue(),
             ""
           )
         );
@@ -379,15 +418,24 @@ public class RequestProcessingActor
         .replyTo()
         .tell(
           new BookingRegistry.DeleteUserAllBookingsResponse(
-            StatusCodes.NOT_FOUND,
+            StatusCodes.NOT_FOUND.intValue(),
             "User does not exists"
           )
         );
       return this;
     }
 
+    Collection<EntityRef<ShowActor.Command>> showActors = new ArrayList<>();
+    for (Long showId : showIdList) {
+      EntityRef<ShowActor.Command> showActor = sharding.entityRefFor(
+        ShowActor.TypeKey,
+        "Show-" + Long.toString(showId)
+      );
+      showActors.add(showActor);
+    }
+
     DeleteBookingResponse response = RequestProcessingUtils.deleteAllUserBookings(
-      showMap.values(),
+      showActors,
       userId,
       askTimeout,
       scheduler
@@ -400,7 +448,7 @@ public class RequestProcessingActor
       .replyTo()
       .tell(
         new BookingRegistry.DeleteUserAllBookingsResponse(
-          StatusCodes.OK,
+          StatusCodes.OK.intValue(),
           "Payment Status :" + status
         )
       );
@@ -412,20 +460,25 @@ public class RequestProcessingActor
     DeleteUserShowBookingsRequestProcess message
   ) {
     Long userId = message.userId();
-    ActorRef<ShowActor.Command> show = showMap.get(message.showId());
-    if (show == null || !UserService.isUserExist(userId, http)) {
+    if (
+      !showIdList.contains(message.showId()) ||
+      !UserService.isUserExist(userId, http)
+    ) {
       message
         .replyTo()
         .tell(
           new BookingRegistry.DeleteUserShowBookingsResponse(
-            StatusCodes.NOT_FOUND,
+            StatusCodes.NOT_FOUND.intValue(),
             "User or Show does not exists"
           )
         );
       return this;
     }
-
-    Collection<ActorRef<ShowActor.Command>> shows = new HashSet<>();
+    EntityRef<ShowActor.Command> show = sharding.entityRefFor(
+      ShowActor.TypeKey,
+      "Show-" + Long.toString(message.showId())
+    );
+    Collection<EntityRef<ShowActor.Command>> shows = new HashSet<>();
     shows.add(show);
     DeleteBookingResponse response = RequestProcessingUtils.deleteAllUserBookings(
       shows,
@@ -436,12 +489,11 @@ public class RequestProcessingActor
     Long refundAmount = response.refundUserAmountMap().get(userId);
     String status = PaymentService.refund(userId, refundAmount, http);
     log.info("Payment Status UserId " + userId + " " + status);
-
     message
       .replyTo()
       .tell(
         new BookingRegistry.DeleteUserShowBookingsResponse(
-          StatusCodes.OK,
+          StatusCodes.OK.intValue(),
           "Payment Status :" + status
         )
       );
@@ -452,8 +504,16 @@ public class RequestProcessingActor
   private Behavior<Command> onDeleteAllBookings(
     DeleteAllBookingsProcess message
   ) {
+    Collection<EntityRef<ShowActor.Command>> showActors = new ArrayList<>();
+    for (Long showId : showIdList) {
+      EntityRef<ShowActor.Command> showActor = sharding.entityRefFor(
+        ShowActor.TypeKey,
+        "Show-" + Long.toString(showId)
+      );
+      showActors.add(showActor);
+    }
     DeleteBookingResponse res = RequestProcessingUtils.deleteAllBookings(
-      showMap.values(),
+      showActors,
       askTimeout,
       scheduler
     );
@@ -471,7 +531,13 @@ public class RequestProcessingActor
 
     message
       .replyTo()
-      .tell(new BookingRegistry.DeleteAllBookingsResponse(StatusCodes.OK, ""));
+      .tell(
+        new BookingRegistry.DeleteAllBookingsResponse(
+          StatusCodes.OK.intValue(),
+          ""
+        )
+      );
     return this;
   }
 }
+/* || !UserService.isUserExist(userId, http)*/

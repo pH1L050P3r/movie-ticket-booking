@@ -6,6 +6,7 @@ import akka.actor.typed.ActorRef;
 import akka.actor.typed.ActorSystem;
 import akka.actor.typed.Scheduler;
 import akka.actor.typed.javadsl.AskPattern;
+import akka.cluster.sharding.typed.javadsl.EntityRef;
 import akka.http.javadsl.marshallers.jackson.Jackson;
 import akka.http.javadsl.model.StatusCodes;
 import akka.http.javadsl.server.Directives;
@@ -144,13 +145,15 @@ public class BookingRoutes {
                 onSuccess(
                   getShow(showId),
                   show -> {
-                    if (show.statusCode() == StatusCodes.OK) return complete(
-                      show.statusCode(),
+                    if (
+                      show.statusCode() == StatusCodes.OK.intValue()
+                    ) return complete(
+                      StatusCodes.get(show.statusCode()),
                       show.body(),
                       Jackson.marshaller()
                     );
                     return complete(
-                      show.statusCode(),
+                      StatusCodes.get(show.statusCode()),
                       show.message(),
                       Jackson.marshaller()
                     );
@@ -169,7 +172,7 @@ public class BookingRoutes {
                       getTheatreAllShows(theatreId),
                       theatre ->
                         complete(
-                          theatre.statusCode(),
+                          StatusCodes.get(theatre.statusCode()),
                           theatre.body(),
                           Jackson.marshaller()
                         )
@@ -193,13 +196,15 @@ public class BookingRoutes {
                 onSuccess(
                   getTheatre(theatreId),
                   theatre -> {
-                    if (theatre.statusCode() == StatusCodes.OK) return complete(
-                      theatre.statusCode(),
+                    if (
+                      theatre.statusCode() == StatusCodes.OK.intValue()
+                    ) return complete(
+                      StatusCodes.get(theatre.statusCode()),
                       theatre.body(),
                       Jackson.marshaller()
                     );
                     return complete(
-                      theatre.statusCode(),
+                      StatusCodes.get(theatre.statusCode()),
                       theatre.message(),
                       Jackson.marshaller()
                     );
@@ -213,7 +218,7 @@ public class BookingRoutes {
                 getAllTheatres(),
                 theatres ->
                   complete(
-                    theatres.statusCode(),
+                    StatusCodes.get(theatres.statusCode()),
                     theatres.body(),
                     Jackson.marshaller()
                   )
@@ -235,7 +240,10 @@ public class BookingRoutes {
                 onSuccess(
                   deleteAllBookings(),
                   response ->
-                    complete(response.statusCode(), response.message())
+                    complete(
+                      StatusCodes.get(response.statusCode()),
+                      response.message()
+                    )
                 )
               ),
               post(() ->
@@ -248,7 +256,7 @@ public class BookingRoutes {
                       createBooking(bookingBody),
                       performed ->
                         complete(
-                          performed.statusCode(),
+                          StatusCodes.get(performed.statusCode()),
                           performed.body(),
                           Jackson.marshaller()
                         )
@@ -270,7 +278,8 @@ public class BookingRoutes {
                     delete(() ->
                       onSuccess(
                         deleteUserShowBookings(userId, showId),
-                        theatre -> complete(theatre.statusCode())
+                        theatre ->
+                          complete(StatusCodes.get(theatre.statusCode()))
                       )
                     )
                 ),
@@ -284,7 +293,7 @@ public class BookingRoutes {
                             getUserAllBookings(userId),
                             theatre ->
                               complete(
-                                theatre.statusCode(),
+                                StatusCodes.get(theatre.statusCode()),
                                 theatre.body(),
                                 Jackson.marshaller()
                               )
@@ -293,7 +302,8 @@ public class BookingRoutes {
                         delete(() ->
                           onSuccess(
                             deleteUserAllBookings(userId),
-                            theatre -> complete(theatre.statusCode())
+                            theatre ->
+                              complete(StatusCodes.get(theatre.statusCode()))
                           )
                         )
                       )

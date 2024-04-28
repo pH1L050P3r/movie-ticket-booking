@@ -1,8 +1,8 @@
 package com.example.requestprocessor;
 
-import akka.actor.typed.ActorRef;
 import akka.actor.typed.Scheduler;
 import akka.actor.typed.javadsl.AskPattern;
+import akka.cluster.sharding.typed.javadsl.EntityRef;
 import com.example.show.ShowActor;
 import com.example.show.ShowActor.DeleteBookingResponse;
 import com.example.show.ShowActor.Show;
@@ -11,18 +11,20 @@ import com.example.theatre.TheatreActor.Theatre;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ExecutionException;
 
 public class RequestProcessingUtils {
 
   private RequestProcessingUtils() {}
 
   public static Show getShowFromShowActor(
-    ActorRef<ShowActor.Command> showActor,
+    EntityRef<ShowActor.Command> showActor,
     Duration askTimeout,
     Scheduler scheduler
   ) {
@@ -32,11 +34,16 @@ public class RequestProcessingUtils {
       askTimeout,
       scheduler
     );
-    return completion.toCompletableFuture().join();
+    try {
+      return completion.toCompletableFuture().get();
+    } catch (InterruptedException | ExecutionException e) {
+      e.printStackTrace();
+    }
+    return null;
   }
 
   public static Theatre getTheatreFromTheatreActor(
-    ActorRef<TheatreActor.Command> theatreActor,
+    EntityRef<TheatreActor.Command> theatreActor,
     Duration askTimeout,
     Scheduler scheduler
   ) {
@@ -46,18 +53,24 @@ public class RequestProcessingUtils {
       askTimeout,
       scheduler
     );
-    return completion.toCompletableFuture().join();
+    try {
+      Theatre theatre = completion.toCompletableFuture().get();
+      return theatre;
+    } catch (InterruptedException | ExecutionException e) {
+      e.printStackTrace();
+    }
+    return null;
   }
 
   public static List<Theatre> getTheatreListFromTheatreActorList(
-    Collection<ActorRef<TheatreActor.Command>> theatresActors,
+    Collection<EntityRef<TheatreActor.Command>> theatresActors,
     Duration askTimeout,
     Scheduler scheduler
   ) {
     List<TheatreActor.Theatre> theatres = new ArrayList<>();
     List<CompletionStage<TheatreActor.Theatre>> completionStages = new ArrayList<>();
 
-    for (ActorRef<TheatreActor.Command> theatreActor : theatresActors) {
+    for (EntityRef<TheatreActor.Command> theatreActor : theatresActors) {
       CompletionStage<TheatreActor.Theatre> completion = AskPattern.ask(
         theatreActor,
         TheatreActor.GetTheatre::new,
@@ -67,14 +80,19 @@ public class RequestProcessingUtils {
       completionStages.add(completion);
     }
 
-    for (CompletionStage<TheatreActor.Theatre> completion : completionStages) {
-      completion.thenAccept(theatres::add);
+    try {
+      for (CompletionStage<TheatreActor.Theatre> completion : completionStages) {
+        Theatre theatre = completion.toCompletableFuture().get();
+        theatres.add(theatre);
+      }
+    } catch (InterruptedException | ExecutionException e) {
+      e.printStackTrace();
     }
     return theatres;
   }
 
   public static List<Show> getTheatreAllShows(
-    ActorRef<TheatreActor.Command> theatreActor,
+    EntityRef<TheatreActor.Command> theatreActor,
     Duration askTimeout,
     Scheduler scheduler
   ) {
@@ -84,18 +102,23 @@ public class RequestProcessingUtils {
       askTimeout,
       scheduler
     );
-    return completion.toCompletableFuture().join().shows();
+    try {
+      return completion.toCompletableFuture().get().getShows();
+    } catch (InterruptedException | ExecutionException e) {
+      e.printStackTrace();
+    }
+    return Collections.emptyList();
   }
 
   public static DeleteBookingResponse deleteAllBookings(
-    Collection<ActorRef<ShowActor.Command>> showActors,
+    Collection<EntityRef<ShowActor.Command>> showActors,
     Duration askTimeout,
     Scheduler scheduler
   ) {
     List<CompletionStage<ShowActor.DeleteBookingResponse>> completions = new ArrayList<>();
     Map<Long, Long> userRefundMapping = new HashMap<>();
 
-    for (ActorRef<ShowActor.Command> showActor : showActors) {
+    for (EntityRef<ShowActor.Command> showActor : showActors) {
       completions.add(
         AskPattern.ask(
           showActor,
@@ -122,7 +145,7 @@ public class RequestProcessingUtils {
   }
 
   public static DeleteBookingResponse deleteAllUserBookings(
-    Collection<ActorRef<ShowActor.Command>> showActors,
+    Collection<EntityRef<ShowActor.Command>> showActors,
     Long userId,
     Duration askTimeout,
     Scheduler scheduler
@@ -130,7 +153,7 @@ public class RequestProcessingUtils {
     List<CompletionStage<ShowActor.DeleteBookingResponse>> completions = new ArrayList<>();
     Map<Long, Long> userRefundMapping = new HashMap<>();
 
-    for (ActorRef<ShowActor.Command> showActor : showActors) {
+    for (EntityRef<ShowActor.Command> showActor : showActors) {
       completions.add(
         AskPattern.ask(
           showActor,
