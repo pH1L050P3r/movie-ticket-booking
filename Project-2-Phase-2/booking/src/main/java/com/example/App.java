@@ -53,7 +53,7 @@ public class App {
       sharding.init(
         Entity.of(ShowActor.TypeKey, entityContext -> ShowActor.create())
       );
-      if (port == 8081) {
+      if (port == 8083) {
         ActorRef<RequestProcessingActor.Command> requestProcessor = context.spawn(
           Routers.group(serviceKey),
           "worker-group"
@@ -89,12 +89,8 @@ public class App {
   }
 
   private static void startup(int port) {
-    int newPort = port;
-    if (port == 8081) {
-      newPort = 22593;
-    }
     Map<String, Object> overrides = new HashMap<>();
-    overrides.put("akka.remote.artery.canonical.port", newPort);
+    overrides.put("akka.remote.artery.canonical.port", port);
     Config config = ConfigFactory
       .parseMap(overrides)
       .withFallback(ConfigFactory.load());
