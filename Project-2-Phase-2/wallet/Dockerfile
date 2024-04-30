@@ -1,7 +1,12 @@
 FROM openjdk:17-jdk-slim
-RUN apt-get update && apt-get install -y maven
 WORKDIR /app
 COPY . ${WORKDIR}
+ENV WALLET_SERVICE_HOST="wallet-service"
+ENV WALLET_SERVICE_PORT="8082"
+ENV BOOKING_SERVICE_HOST="booking-service"
+ENV BOOKING_SERVICE_PORT="8081"
+ENV USER_SERVICE_HOST="user-service"
+ENV USER_SERVICE_PORT="8080"
+RUN ./mvnw package
 EXPOSE 8080
-RUN mvn compile
-CMD ["sh", "-c", "mvn exec:java --debug"]
+CMD ["sh", "-c", "java -jar ./target/*.jar  --debug"]

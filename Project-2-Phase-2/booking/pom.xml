@@ -116,6 +116,11 @@
 			<artifactId>opencsv</artifactId>
 			<version>5.4</version>
 		</dependency>
+        <dependency>
+            <groupId>org.lmdbjava</groupId>
+            <artifactId>lmdbjava</artifactId>
+            <version>0.8.2</version>
+        </dependency>
 
     </dependencies>
     <build>
@@ -127,6 +132,7 @@
                 <configuration>
                     <source>17</source>
                     <target>17</target>
+                    <argLine>--add-opens java.base/java.nio=ALL-UNNAMED</argLine>
                 </configuration>
             </plugin>
             <plugin>
