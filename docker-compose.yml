@@ -1,0 +1,81 @@
+version: '3'
+
+services:
+  user-service:
+    build:
+      context: ./user
+    image: user-service
+    networks:
+      - service-network
+    ports:
+      - "8080:8080" 
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - WALLET_SERVICE_HOST=host.docker.internal
+      - WALLET_SERVICE_PORT=8083
+      - BOOKING_SERVICE_HOST=host.docker.internal
+      - BOOKING_SERVICE_PORT=8082
+      - USER_SERVICE_HOST=host.docker.internal
+      - USER_SERVICE_PORT=8081
+    depends_on:
+      - h2-db-service
+
+
+  booking-service:
+    build:
+      context: ./booking
+    image: booking-service
+    networks:
+      - service-network
+    ports:
+      - "8081:8081"
+    environment:
+      - WALLET_SERVICE_HOST=host.docker.internal
+      - WALLET_SERVICE_PORT=8083
+      - BOOKING_SERVICE_HOST=host.docker.internal
+      - BOOKING_SERVICE_PORT=8082
+      - USER_SERVICE_HOST=host.docker.internal
+      - USER_SERVICE_PORT=8081
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+
+  wallet-service:
+    build:
+      context: ./wallet
+    image: wallet-service
+    networks:
+      - service-network
+    ports:
+      - "8082:8080"
+    environment:
+      - WALLET_SERVICE_HOST=host.docker.internal
+      - WALLET_SERVICE_PORT=8083
+      - BOOKING_SERVICE_HOST=host.docker.internal
+      - BOOKING_SERVICE_PORT=8082
+      - USER_SERVICE_HOST=host.docker.internal
+      - USER_SERVICE_PORT=8081 
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - my_volume:/app/journal
+
+  h2-db-service:
+    build:
+      context: ./h2-db-service
+    image: h2-db-service
+    networks:
+      - service-network
+    ports:
+      - "9082:9082"
+      - "9081:9081" 
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  my_volume:
+
+networks:
+  service-network:
+    driver: bridge
