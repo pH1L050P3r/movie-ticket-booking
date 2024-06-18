@@ -38,34 +38,25 @@ public class App {
 
   public static void main(String[] args) {
     if (args.length == 0) {
-      startup(8081);
+      startup(8080);
+	  // startup(8081);
+      startup(8082);
       startup(8083);
-      startup(8084);
     } else Arrays.stream(args).map(Integer::parseInt).forEach(App::startup);
   }
 
   private static Behavior<Void> rootBehavior(int port) {
     return Behaviors.setup(context -> {
       final ClusterSharding sharding = ClusterSharding.get(context.getSystem());
-      sharding.init(
-        Entity.of(TheatreActor.TypeKey, entityContext -> TheatreActor.create())
-      );
-      sharding.init(
-        Entity.of(ShowActor.TypeKey, entityContext -> ShowActor.create())
-      );
+      sharding.init(Entity.of(TheatreActor.TypeKey, entityContext -> TheatreActor.create()));
+      sharding.init(Entity.of(ShowActor.TypeKey, entityContext -> ShowActor.create()));
+
       if (port == 8083) {
         ActorRef<RequestProcessingActor.Command> requestProcessor = context.spawn(
-          Routers.group(serviceKey),
-          "worker-group"
-        );
+		  Routers.group(serviceKey), "worker-group");
         ActorRef<BookingRegistry.Command> bookingRegistryActor = context.spawn(
-          BookingRegistry.create(requestProcessor),
-          "BookingRegistry"
-        );
-        BookingRoutes bookingRoutes = new BookingRoutes(
-          context.getSystem(),
-          bookingRegistryActor
-        );
+          BookingRegistry.create(requestProcessor), "BookingRegistry");
+        BookingRoutes bookingRoutes = new BookingRoutes(context.getSystem(), bookingRegistryActor);
         loadActorsFromFile(sharding);
         startHttpServer(bookingRoutes.urlRoute(), context.getSystem());
       }
